@@ -70,7 +70,6 @@ irq_\irq_no:
 	addl $4, %esp        # discard interrupt vector number
         cli
 	popal
-        addl $8, %esp;
 	iretl
 .endm
 
@@ -97,7 +96,12 @@ syscall_handler:
 	pushl %ecx # param 2
 	pushl %ebx # param 1
 	call *systemcall_table(,%eax,4) # call systemcall function position %eax moving 4 bytes
-	add 12, %esp # cleaning stack
+	add $12, %esp # cleaning stack
 	# return is available in %eax
+	iretl
+
+.global yield_handler
+yield_handler:
+	call schedule
 	iretl
 

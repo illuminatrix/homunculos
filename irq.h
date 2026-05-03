@@ -12,6 +12,6 @@ enum IRQ_REQUEST_ERROR {
 };
 
 uint8_t irq_request(uint8_t irq, irq_handler_t handler);
-void irq_handler();
+void irq_handler(uint8_t irq);
 
 #endif
