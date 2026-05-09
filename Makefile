@@ -23,7 +23,7 @@ QEMU_CMD := qemu-system-i386 -kernel kernel.bin -display curses -serial mon:stdi
 kernel.bin: $(OBJS)
 	cd libc && make
 	@echo "LD $^    ->    $@"
-	$(LD) -T arch/$(ARCH)/kernel.ld -melf_i386 -o $@ libc/stdio/*.o libc/string/*.o $^
+	$(LD) -T arch/$(ARCH)/kernel.ld -melf_i386 -o $@ libc/stdio/*.o libc/string/*.o libc/unistd/*.o $^
 
 debug: kernel.bin
 	$(OBJDUMP) -lSdx kernel.bin > kernel.lst

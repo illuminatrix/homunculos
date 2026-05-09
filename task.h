@@ -25,11 +25,14 @@ struct task {
 	char name[TASK_NAME_LEN];
 	struct task *next;
 	struct file *fd_table[VFS_MAX_FD];
+	uint32_t *pdir;
 };
 
 struct task *task_create(const char *name, void (*entry)(void *), void *arg);
+struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags, uint32_t parent_fp);
 void task_exit(void);
 void task_yield(void);
 void task_init_context(struct task *t, void (*entry)(void *), void *arg);
+void task_init_fork_context(struct task *child, uint32_t fork_esp, uint32_t fork_ebp);
 
 #endif

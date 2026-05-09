@@ -105,3 +105,8 @@ yield_handler:
 	call schedule
 	iretl
 
+.global fork_return
+fork_return:
+	movl $0, %eax
+	iretl
+

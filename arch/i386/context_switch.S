@@ -3,9 +3,15 @@
 
 .section .text
 
+# struct task_context layout:
+#   esp  = 0
+#   ebp  = 4
+#   ebx  = 8
+#   esi  = 12
+#   edi  = 16
+#   pdir = 20
+
 # switch_context(prev, next)
-# Save current context to prev, load context from next.
-# After this function "returns", we're in the next task.
 switch_context:
 	movl 4(%esp), %eax   # eax = prev
 	movl 8(%esp), %ecx   # ecx = next
@@ -17,6 +23,10 @@ switch_context:
 	movl %esi, 12(%eax)  # prev->context.esi
 	movl %edi, 16(%eax)  # prev->context.edi
 
+	# Switch CR3 to next's page directory
+	movl 20(%ecx), %edx  # next->context.pdir
+	movl %edx, %cr3
+
 	# Load next's context
 	movl (%ecx), %esp    # esp = next->context.esp
 	movl 4(%ecx), %ebp
@@ -24,13 +34,15 @@ switch_context:
 	movl 12(%ecx), %esi
 	movl 16(%ecx), %edi
 
-	# "Return" to next task - pops return address from next's stack
 	ret
 
 # context_restore(context)
-# Load context and jump to it. Used for starting the first task.
 context_restore:
 	movl 4(%esp), %eax   # eax = context
+
+	# Switch CR3 to the task's page directory
+	movl 20(%eax), %edx  # context->pdir
+	movl %edx, %cr3
 
 	movl (%eax), %esp    # esp = context.esp
 	movl 4(%eax), %ebp
@@ -38,5 +50,4 @@ context_restore:
 	movl 12(%eax), %esi
 	movl 16(%eax), %edi
 
-	# "Return" to the task
 	ret

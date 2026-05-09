@@ -9,6 +9,8 @@ string/memmove.o \
 string/memset.o \
 string/strlen.o \
 string/strncpy.o \
+unistd/fork.o \
+unistd/read.o \
 
 OBJS:=\
 $(FREEOBJS) \
