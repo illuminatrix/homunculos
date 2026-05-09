@@ -6,6 +6,7 @@
 #include "irq.h"
 #include "scheduler.h"
 #include "task.h"
+#include "vfs.h"
 
 void welcome()
 {
@@ -35,6 +36,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
     syscall_init();
     pic_init();
     load_idt();
+    vfs_init();
 
     welcome();
     init_mm((mmap_entry_t *)mem_info_ptr->mmap_addr,

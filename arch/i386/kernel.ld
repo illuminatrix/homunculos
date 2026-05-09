@@ -9,15 +9,19 @@ SECTIONS
 		*(.multiboot)
 		*(.text)
 	}
- 
+
 	.rodata BLOCK(4K) : ALIGN(4K)
 	{
 		*(.rodata)
 	}
- 
+
 	.data BLOCK(4K) : ALIGN(4K)
 	{
 		*(.data)
+		. = ALIGN(4);
+		__driver_init_start = .;
+		KEEP(*(.driver_init))
+		__driver_init_end = .;
 	}
  
 	.bss BLOCK(4K) : ALIGN(4K)

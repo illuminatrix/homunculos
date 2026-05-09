@@ -7,7 +7,8 @@ ARCH := i386
 OBJDUMP := /usr/bin/objdump
 CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -Ilibc/include
 ASFLAGS := -32
-OBJS := arch/$(ARCH)/kernel_head.o arch/$(ARCH)/isrs.o arch/$(ARCH)/context_switch.o arch/$(ARCH)/task.o syscall.o arch/$(ARCH)/interrupts.o kernel.o arch/$(ARCH)/mm.o pic.o arch/$(ARCH)/pio.o irq.o arch/$(ARCH)/pit.o scheduler.o task.o
+OBJS := arch/$(ARCH)/kernel_head.o arch/$(ARCH)/isrs.o arch/$(ARCH)/context_switch.o arch/$(ARCH)/task.o syscall.o arch/$(ARCH)/interrupts.o kernel.o arch/$(ARCH)/mm.o pic.o arch/$(ARCH)/pio.o irq.o arch/$(ARCH)/pit.o scheduler.o task.o vfs.o
+include drivers/Makefile.mk
 QEMU_CMD := qemu-system-i386 -kernel kernel.bin -display curses -serial mon:stdio
 
 
@@ -39,4 +40,5 @@ gdb:
 .PHONY: clean
 clean:
 	cd libc && make clean
+	find drivers -name '*.o' -delete
 	rm -f *.o arch/$(ARCH)/*o *.bin *.lst

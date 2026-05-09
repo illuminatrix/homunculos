@@ -2,6 +2,7 @@
 #define TASK_H
 
 #include <stdint.h>
+#include "vfs.h"
 
 #define MAX_TASKS 256
 #define TASK_STACK_SIZE 4096
@@ -23,6 +24,7 @@ struct task {
 	uint8_t *stack;
 	char name[TASK_NAME_LEN];
 	struct task *next;
+	struct file *fd_table[VFS_MAX_FD];
 };
 
 struct task *task_create(const char *name, void (*entry)(void *), void *arg);

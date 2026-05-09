@@ -9,8 +9,9 @@ print(const char* data, size_t data_length)
     __asm__ volatile ("int $0x80"
 	: "=a" (res)
 	: "0" (1),
-	"b" ((long)(data)),
-	"c" ((long)(data_length)));
+	"b" ((long)(1)),
+	"c" ((long)(data)),
+	"d" ((long)(data_length)));
 }
 
 int
