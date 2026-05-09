@@ -1,12 +1,14 @@
 #include <stdint.h>
+#include <stddef.h>
 #include "task.h"
 #include "scheduler.h"
 #include "vfs.h"
+#include "syscall.h"
 
 uint32_t systemcall_table[255];
 
 int
-sys_write(int fd, const char *buf, int len)
+sys_write(int fd, const void *buf, size_t len)
 {
 	struct task *current = scheduler_get_current();
 	struct file *f;
@@ -21,29 +23,25 @@ sys_write(int fd, const char *buf, int len)
 	return f->ops->write(f, buf, len);
 }
 
-void
-sys_create_task(char *name, void (*entry)(void *), void *arg)
+int
+sys_exit(int status)
 {
-	task_create(name, entry, arg);
-}
-
-void
-sys_exit(void)
-{
+	(void)status;
 	task_exit();
+	return 0;
 }
 
-void
+int
 sys_yield(void)
 {
 	task_yield();
+	return 0;
 }
 
 void
 syscall_init(void)
 {
-	systemcall_table[1] = (uint32_t)sys_write;
-	systemcall_table[2] = (uint32_t)sys_create_task;
-	systemcall_table[3] = (uint32_t)sys_exit;
-	systemcall_table[4] = (uint32_t)sys_yield;
+	systemcall_table[SYS_exit]        = (uint32_t)sys_exit;
+	systemcall_table[SYS_write]       = (uint32_t)sys_write;
+	systemcall_table[SYS_sched_yield] = (uint32_t)sys_yield;
 }

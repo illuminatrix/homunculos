@@ -5,10 +5,10 @@
 static void
 print(const char* data, size_t data_length)
 {
-    long res;
-    __asm__ volatile ("int $0x80"
+	long res;
+	__asm__ volatile ("int $0x80"
 	: "=a" (res)
-	: "0" (1),
+	: "0" (4),
 	"b" ((long)(1)),
 	"c" ((long)(data)),
 	"d" ((long)(data_length)));
@@ -17,15 +17,15 @@ print(const char* data, size_t data_length)
 int
 printf(const char* restrict format, ...)
 {
-    int written = 0;
-    char buffer[255];
-    va_list parameters;
-    va_start(parameters, format);
+	int written = 0;
+	char buffer[255];
+	va_list parameters;
+	va_start(parameters, format);
 
-    written = vsprintf(&buffer[0], format, parameters);
-    print(buffer, written);
+	written = vsprintf(&buffer[0], format, parameters);
+	print(buffer, written);
 
-    va_end(parameters);
+	va_end(parameters);
 
-    return written;
+	return written;
 }
