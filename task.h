@@ -28,7 +28,7 @@ struct task {
 	uint32_t *pdir;
 };
 
-struct task *task_create(const char *name, void (*entry)(void *), void *arg);
+struct task *task_alloc(void);
 struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags, uint32_t parent_fp);
 void task_exit(void);
 void task_yield(void);

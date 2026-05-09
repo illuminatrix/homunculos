@@ -9,18 +9,7 @@ static struct task *current_task = 0;
 static uint32_t tick_count = 0;
 #define TIME_SLICE 10
 
-static void idle_task(void *arg) {
-	(void)arg;
-	while (1) {
-		asm volatile("hlt");
-	}
-}
-
 void scheduler_init(void) {
-	struct task *idle = task_create("idle", idle_task, 0);
-	if (idle) {
-		idle->state = TASK_STATE_READY;
-	}
 	pit_init(100);
 	pit_set_callback(scheduler_tick);
 }
@@ -49,16 +38,8 @@ void scheduler_tick(void) {
 	}
 }
 
-static int task_is_idle(struct task *t) {
-	return t && t->pid == 0;
-}
-
 static void move_to_tail(struct task *t) {
-	/* find t in the queue and move it to the tail */
 	if (!run_queue_head || !t || run_queue_head == run_queue_tail)
-		return;
-	/* don't move idle task - keep it as fallback */
-	if (task_is_idle(t))
 		return;
 	if (run_queue_head == t) {
 		/* t is the head, simple detach */
@@ -90,22 +71,11 @@ void schedule(void) {
 			move_to_tail(prev);
 	}
 
-	/* skip exited tasks in selection */
-	/* first pass: find a ready non-idle task */
 	next = run_queue_head;
 	while (next) {
-		if (next->state == TASK_STATE_READY && !task_is_idle(next))
+		if (next->state == TASK_STATE_READY)
 			break;
 		next = next->next;
-	}
-	/* second pass: include idle if nothing else is ready */
-	if (!next) {
-		next = run_queue_head;
-		while (next) {
-			if (next->state == TASK_STATE_READY)
-				break;
-			next = next->next;
-		}
 	}
 
 	if (!next)

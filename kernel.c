@@ -4,6 +4,7 @@
 #include "mm.h"
 #include "pic.h"
 #include "irq.h"
+#include <string.h>
 #include "scheduler.h"
 #include "task.h"
 #include "vfs.h"
@@ -32,6 +33,23 @@ void task_main(void *arg) {
 	}
 }
 
+static void setup_main_task(void (*entry)(void *), void *arg)
+{
+	struct task *t = task_alloc();
+	if (!t)
+		return;
+
+	t->fd_table[0] = NULL;
+	t->fd_table[1] = vfs_get_stdout();
+	t->fd_table[2] = vfs_get_stderr();
+
+	strncpy(t->name, "main", TASK_NAME_LEN - 1);
+	t->name[TASK_NAME_LEN - 1] = '\0';
+
+	task_init_context(t, entry, arg);
+	scheduler_add_task(t);
+}
+
 void kernel_main(multiboot_info_t *mem_info_ptr)
 {
 	extern void syscall_init(void);
@@ -46,7 +64,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 		mem_info_ptr->mmap_length);
 
 	scheduler_init();
-	task_create("main", task_main, 0);
+	setup_main_task(task_main, 0);
 
 	pic_enable_irq(0);
 
