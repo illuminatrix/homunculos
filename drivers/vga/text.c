@@ -87,8 +87,18 @@ static int vga_text_write(struct file *file, const void *buf, size_t nbyte)
 	return written;
 }
 
+static void vga_text_clear(void)
+{
+	uint16_t blank = ' ' | (0x0F << 8);
+	int i;
+	for (i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
+		VGA_BUFFER[i] = blank;
+}
+
 static void vga_text_init(void)
 {
+	vga_text_clear();
+
 	vga_cursor.x = 0;
 	vga_cursor.y = 0;
 

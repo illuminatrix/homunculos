@@ -44,11 +44,7 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	for (i = 0; i < VFS_MAX_FD; i++)
 		child->fd_table[i] = parent->fd_table[i];
 
-	child->pdir = mm_clone_pdir(parent->pdir);
-	if (!child->pdir) {
-		child->state = TASK_STATE_EXITED;
-		return 0;
-	}
+	child->pdir = parent->pdir;
 
 	/*
 	 * Copy parent's stack data below the int $0x80 frame to child.

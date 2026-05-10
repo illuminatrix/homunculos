@@ -4,6 +4,7 @@
 extern vfs_driver_init_fn __driver_init_start[];
 extern vfs_driver_init_fn __driver_init_end[];
 
+struct file *vfs_stdin;
 struct file *vfs_stdout;
 struct file *vfs_stderr;
 
@@ -13,6 +14,11 @@ void vfs_init(void)
 
 	for (fn = __driver_init_start; fn < __driver_init_end; fn++)
 		(*fn)();
+}
+
+struct file *vfs_get_stdin(void)
+{
+	return vfs_stdin;
 }
 
 struct file *vfs_get_stdout(void)

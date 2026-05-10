@@ -75,8 +75,8 @@ vsprintf(char* str, const char* restrict format, va_list args)
         }
     }
 
-    if (written > 0)
-	    str[written++] = '\0';
+	if (written > 0)
+	    str[written] = '\0';
 
     return written;
 }

@@ -29,11 +29,13 @@ typedef void (*vfs_driver_init_fn)(void);
 		__attribute__((used, section(".driver_init"))) = fn
 
 /* Global file pointers (set by drivers during init) */
+extern struct file *vfs_stdin;
 extern struct file *vfs_stdout;
 extern struct file *vfs_stderr;
 
 /* VFS core API */
 void vfs_init(void);
+struct file *vfs_get_stdin(void);
 struct file *vfs_get_stdout(void);
 struct file *vfs_get_stderr(void);
 

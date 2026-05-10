@@ -14,10 +14,15 @@ sys_write(int fd, const void *buf, size_t len)
 	struct task *current = scheduler_get_current();
 	struct file *f;
 
-	if (!current || fd < 0 || fd >= VFS_MAX_FD)
+	if (fd < 0 || fd >= VFS_MAX_FD)
 		return -1;
 
-	f = current->fd_table[fd];
+	if (!current) {
+		f = fd == 2 ? vfs_get_stderr() : vfs_get_stdout();
+	} else {
+		f = current->fd_table[fd];
+	}
+
 	if (!f || !f->ops || !f->ops->write)
 		return -1;
 
@@ -38,10 +43,15 @@ sys_read(int fd, void *buf, size_t len)
 	struct task *current = scheduler_get_current();
 	struct file *f;
 
-	if (!current || fd < 0 || fd >= VFS_MAX_FD)
+	if (fd < 0 || fd >= VFS_MAX_FD)
 		return -1;
 
-	f = current->fd_table[fd];
+	if (!current) {
+		f = vfs_get_stdin();
+	} else {
+		f = current->fd_table[fd];
+	}
+
 	if (!f || !f->ops || !f->ops->read)
 		return -1;
 

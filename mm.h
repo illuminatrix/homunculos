@@ -6,7 +6,7 @@
 #include "kernel.h"
 
 #define FRAME 0x1000
-#define DIR_SIZE 1<<10
+#define DIR_SIZE (1<<10)
 #define MAX_MEMORY_BYTES (256 * 1024 * 1024)
 #define MAX_FRAMES (MAX_MEMORY_BYTES / FRAME)
 #define FRAME_ALLOC_BITMAP_SIZE (MAX_FRAMES / 32)

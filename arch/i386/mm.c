@@ -3,12 +3,14 @@
 #include <string.h>
 #include "mm.h"
 
-#define NUM_PT 2
+/* Identity-map 16MB (4 PTs, each covering 4MB) */
+#define NUM_PT 4
+#define IDENT_PAGES (NUM_PT * DIR_SIZE)
 
 uint32_t kernel_pdir[DIR_SIZE] __attribute__((aligned(FRAME)));
 uint32_t kernel_pt[NUM_PT][DIR_SIZE] __attribute__((aligned(FRAME)));
 
-static uint32_t frame_bitmap[FRAME_ALLOC_BITMAP_SIZE];
+static uint32_t frame_bitmap[IDENT_PAGES / 32];
 
 extern uint32_t __kernel_end;
 
@@ -54,8 +56,8 @@ static void frame_bitmap_init(mmap_entry_t *mmap_addr, uint32_t len)
 		if (entry->type == MMAP_MEMORY_AVAILABLE) {
 			uint32_t start = (uint32_t)(entry->addr / FRAME);
 			uint32_t end = (uint32_t)((entry->addr + entry->len) / FRAME);
-			if (end > MAX_FRAMES)
-				end = MAX_FRAMES;
+			if (end > IDENT_PAGES)
+				end = IDENT_PAGES;
 			for (i = start; i < end; i++)
 				bitmap_clear(i);
 		}
@@ -87,7 +89,7 @@ void turn_on_paging(void)
 void *mm_frame_alloc(void)
 {
 	uint32_t i;
-	for (i = 0; i < MAX_FRAMES; i++) {
+	for (i = 0; i < IDENT_PAGES; i++) {
 		if (!bitmap_test(i)) {
 			bitmap_set(i);
 			return (void *)(i * FRAME);
@@ -99,7 +101,7 @@ void *mm_frame_alloc(void)
 void mm_frame_free(void *addr)
 {
 	uint32_t frame = (uint32_t)addr / FRAME;
-	if (frame < MAX_FRAMES)
+	if (frame < IDENT_PAGES)
 		bitmap_clear(frame);
 }
 

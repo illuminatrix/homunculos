@@ -15,20 +15,47 @@ void welcome()
 	printf("Illuminatrix Kernel!\n");
 }
 
-void task_main(void *arg) {
+static void shell_prompt(void)
+{
+	printf("> ");
+}
+
+static void shell_main(void *arg)
+{
 	(void)arg;
+	char buf[64];
+	int pos = 0;
 
-	int pid = fork();
+	shell_prompt();
 
-	if (pid == 0) {
-		while (1) {
-			printf("B");
+	while (1) {
+		char c;
+		int n = read(0, &c, 1);
+		if (n <= 0) {
 			task_yield();
+			continue;
 		}
-	} else {
-		while (1) {
-			printf("A");
-			task_yield();
+
+		if (c == '\n') {
+			printf("\n");
+			buf[pos] = '\0';
+			if (pos == 8 && buf[0] == 'g' && buf[1] == 'r'
+			    && buf[2] == 'e' && buf[3] == 'e'
+			    && buf[4] == 't' && buf[5] == 'i'
+			    && buf[6] == 'n' && buf[7] == 'g')
+				printf("hello\n");
+			else if (pos > 0)
+				printf("unknown\n");
+			pos = 0;
+			shell_prompt();
+		} else if (c == '\b') {
+			if (pos > 0) {
+				pos--;
+				printf("\b \b");
+			}
+		} else if (pos < (int)sizeof(buf) - 1) {
+			buf[pos++] = c;
+			printf("%c", c);
 		}
 	}
 }
@@ -39,7 +66,7 @@ static void setup_main_task(void (*entry)(void *), void *arg)
 	if (!t)
 		return;
 
-	t->fd_table[0] = NULL;
+	t->fd_table[0] = vfs_get_stdin();
 	t->fd_table[1] = vfs_get_stdout();
 	t->fd_table[2] = vfs_get_stderr();
 
@@ -64,9 +91,10 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 		mem_info_ptr->mmap_length);
 
 	scheduler_init();
-	setup_main_task(task_main, 0);
+	setup_main_task(shell_main, 0);
 
 	pic_enable_irq(0);
+	pic_enable_irq(1);
 
 	while (1) {
 		asm volatile("hlt");
