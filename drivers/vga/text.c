@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "pio.h"
 #include <string.h>
 
 #define VGA_WIDTH  80
@@ -27,11 +28,22 @@ static struct file vga_stdout_file;
 static struct file vga_stderr_file;
 
 static int vga_text_write(struct file *file, const void *buf, size_t nbyte);
+static void vga_update_cursor(struct vga_cursor *cursor);
 
 static struct vfs_ops vga_ops = {
 	.write = vga_text_write,
 	.read  = NULL,
 };
+
+static void vga_update_cursor(struct vga_cursor *cursor)
+{
+	uint16_t pos = cursor->y * VGA_WIDTH + cursor->x;
+
+	out(0x3D4, 0x0E);
+	out(0x3D5, pos >> 8);
+	out(0x3D4, 0x0F);
+	out(0x3D5, pos & 0xFF);
+}
 
 static int vga_text_write(struct file *file, const void *buf, size_t nbyte)
 {
@@ -68,11 +80,9 @@ static int vga_text_write(struct file *file, const void *buf, size_t nbyte)
 		}
 
 		if (priv->cursor->y >= VGA_HEIGHT) {
-			/* scroll one line up */
 			memmove(VGA_BUFFER, VGA_BUFFER + VGA_WIDTH,
 				VGA_WIDTH * (VGA_HEIGHT - 1) * sizeof(uint16_t));
 
-			/* clear last line */
 			uint16_t blank = ' ' | ((uint16_t)priv->color << 8);
 			int x;
 			for (x = 0; x < VGA_WIDTH; x++)
@@ -84,6 +94,7 @@ static int vga_text_write(struct file *file, const void *buf, size_t nbyte)
 		written++;
 	}
 
+	vga_update_cursor(priv->cursor);
 	return written;
 }
 
@@ -101,6 +112,7 @@ static void vga_text_init(void)
 
 	vga_cursor.x = 0;
 	vga_cursor.y = 0;
+	vga_update_cursor(&vga_cursor);
 
 	stdout_priv.cursor = &vga_cursor;
 	stdout_priv.color  = 0x0F; /* white on black */

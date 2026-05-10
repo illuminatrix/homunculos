@@ -2,3 +2,4 @@ kernel.bin
 compile_commands.json
 *.o
 .cache
+serial.log
