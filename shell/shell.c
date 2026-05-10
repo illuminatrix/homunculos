@@ -1,19 +1,18 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 #include "task.h"
+
+#define SHELL_BUF_SIZE 64
 
 static void shell_prompt(void)
 {
 	printf("> ");
 }
 
-void shell_main(void *arg)
+static int shell_readline(char *buf, int size)
 {
-	(void)arg;
-	char buf[64];
 	int pos = 0;
-
-	shell_prompt();
 
 	while (1) {
 		char c;
@@ -26,28 +25,37 @@ void shell_main(void *arg)
 		if (c == '\n') {
 			printf("\n");
 			buf[pos] = '\0';
-			if (pos == 8 && buf[0] == 'p' && buf[1] == 'o'
-			    && buf[2] == 'w' && buf[3] == 'e'
-			    && buf[4] == 'r' && buf[5] == 'o'
-			    && buf[6] == 'f' && buf[7] == 'f')
-				reboot();
-			else if (pos == 8 && buf[0] == 'g' && buf[1] == 'r'
-			    && buf[2] == 'e' && buf[3] == 'e'
-			    && buf[4] == 't' && buf[5] == 'i'
-			    && buf[6] == 'n' && buf[7] == 'g')
-				printf("hello\n");
-			else if (pos > 0)
-				printf("unknown\n");
-			pos = 0;
-			shell_prompt();
+			return pos;
 		} else if (c == '\b') {
 			if (pos > 0) {
 				pos--;
 				printf("\b \b");
 			}
-		} else if (pos < (int)sizeof(buf) - 1) {
+		} else if (pos < size - 1) {
 			buf[pos++] = c;
 			printf("%c", c);
 		}
+	}
+}
+
+static void shell_execute(const char *buf)
+{
+	if (strcmp(buf, "poweroff") == 0)
+		reboot();
+	else if (strcmp(buf, "greeting") == 0)
+		printf("hello\n");
+	else if (buf[0] != '\0')
+		printf("unknown\n");
+}
+
+void shell_main(void *arg)
+{
+	(void)arg;
+	char buf[SHELL_BUF_SIZE];
+
+	while (1) {
+		shell_prompt();
+		shell_readline(buf, SHELL_BUF_SIZE);
+		shell_execute(buf);
 	}
 }

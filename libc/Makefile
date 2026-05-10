@@ -9,6 +9,7 @@ string/memmove.o \
 string/memset.o \
 string/strlen.o \
 string/strncpy.o \
+string/strcmp.o \
 unistd/fork.o \
 unistd/read.o \
 unistd/reboot.o \

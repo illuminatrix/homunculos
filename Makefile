@@ -5,7 +5,7 @@ AS := as
 LD := ld
 ARCH := i386
 OBJDUMP := /usr/bin/objdump
-CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -Ilibc/include -Ikernel -Ishell
+CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector -Ilibc/include -Ikernel -Ishell
 ASFLAGS := -32
 include arch/Makefile.mk
 include kernel/Makefile.mk
