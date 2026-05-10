@@ -39,7 +39,12 @@ static void shell_main(void *arg)
 		if (c == '\n') {
 			printf("\n");
 			buf[pos] = '\0';
-			if (pos == 8 && buf[0] == 'g' && buf[1] == 'r'
+			if (pos == 8 && buf[0] == 'p' && buf[1] == 'o'
+			    && buf[2] == 'w' && buf[3] == 'e'
+			    && buf[4] == 'r' && buf[5] == 'o'
+			    && buf[6] == 'f' && buf[7] == 'f')
+				reboot();
+			else if (pos == 8 && buf[0] == 'g' && buf[1] == 'r'
 			    && buf[2] == 'e' && buf[3] == 'e'
 			    && buf[4] == 't' && buf[5] == 'i'
 			    && buf[6] == 'n' && buf[7] == 'g')

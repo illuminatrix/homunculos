@@ -5,8 +5,35 @@
 #include "scheduler.h"
 #include "vfs.h"
 #include "syscall.h"
+#include "interrupt.h"
+#include "pio.h"
 
 uint32_t systemcall_table[255];
+
+static void poweroff(void)
+{
+	disable_interrupts();
+
+	/* QEMU */
+	outw(0x604, 0x2000);
+
+	/* Bochs */
+	outw(0xB004, 0x2000);
+
+	/* VirtualBox - full 32-bit write */
+	outl(0x4004, 0x3400);
+
+	/* Triple fault fallback */
+	struct {
+		uint16_t limit;
+		uint32_t base;
+	} __attribute__((packed)) null_idt = {0, 0};
+	__asm__ volatile("lidt %0" : : "m"(null_idt));
+	__asm__ volatile("int $3");
+
+	while (1)
+		__asm__ volatile("hlt");
+}
 
 int
 sys_write(int fd, const void *buf, size_t len)
@@ -66,6 +93,13 @@ sys_yield(void)
 }
 
 int
+sys_reboot(void)
+{
+	poweroff();
+	return 0;
+}
+
+int
 sys_fork(void)
 {
 	uint32_t eip, cs, eflags, fp;
@@ -93,4 +127,5 @@ syscall_init(void)
 	systemcall_table[SYS_read]        = (uint32_t)sys_read;
 	systemcall_table[SYS_write]       = (uint32_t)sys_write;
 	systemcall_table[SYS_sched_yield] = (uint32_t)sys_yield;
+	systemcall_table[SYS_reboot]    = (uint32_t)sys_reboot;
 }

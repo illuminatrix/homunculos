@@ -6,5 +6,6 @@
 #define SYS_read        3
 #define SYS_write       4
 #define SYS_sched_yield 24
+#define SYS_reboot      88
 
 #endif

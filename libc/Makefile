@@ -11,6 +11,7 @@ string/strlen.o \
 string/strncpy.o \
 unistd/fork.o \
 unistd/read.o \
+unistd/reboot.o \
 
 OBJS:=\
 $(FREEOBJS) \

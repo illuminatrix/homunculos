@@ -10,6 +10,7 @@ extern "C" {
 
 int fork(void);
 int read(int, void *, size_t);
+int reboot(void);
 
 #ifdef __cplusplus
 }
