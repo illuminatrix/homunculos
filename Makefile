@@ -5,10 +5,11 @@ AS := as
 LD := ld
 ARCH := i386
 OBJDUMP := /usr/bin/objdump
-CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -Ilibc/include -Ikernel
+CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -Ilibc/include -Ikernel -Ishell
 ASFLAGS := -32
 include arch/Makefile.mk
 include kernel/Makefile.mk
+include shell/Makefile.mk
 include drivers/Makefile.mk
 QEMU_CMD := qemu-system-i386 -kernel kernel.bin -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait
 
@@ -47,4 +48,4 @@ quit:
 clean:
 	cd libc && make clean
 	find drivers -name '*.o' -delete
-	rm -f *.o arch/$(ARCH)/*o kernel/*.o *.bin *.lst serial.log qemu-monitor.sock
+	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o *.bin *.lst serial.log qemu-monitor.sock
