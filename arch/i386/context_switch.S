@@ -1,5 +1,6 @@
-.global switch_context
+	.global switch_context
 .global context_restore
+.global context_restore_user
 
 .section .text
 
@@ -51,3 +52,20 @@ context_restore:
 	movl 16(%eax), %edi
 
 	ret
+
+# context_restore_user(context)
+# Like context_restore but uses iretl to enter ring 3
+context_restore_user:
+	movl 4(%esp), %eax   # eax = context
+
+	movl 20(%eax), %edx  # context->pdir
+	movl %edx, %cr3
+
+	movl (%eax), %esp    # esp = context->esp
+	movl 4(%eax), %ebp
+	movl 8(%eax), %ebx
+	movl 12(%eax), %esi
+	movl 16(%eax), %edi
+
+	# esp now points to iretl frame: [eip][cs][eflags][esp][ss]
+	iretl

@@ -9,6 +9,7 @@
 #include "task.h"
 #include "vfs.h"
 #include "shell.h"
+#include "gdt.h"
 
 void welcome()
 {
@@ -28,7 +29,7 @@ static void setup_main_task(void (*entry)(void *), void *arg)
 	strncpy(t->name, "main", TASK_NAME_LEN - 1);
 	t->name[TASK_NAME_LEN - 1] = '\0';
 
-	task_init_context(t, entry, arg);
+	task_init_user_context(t, entry, arg);
 	scheduler_add_task(t);
 }
 
@@ -45,6 +46,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	init_mm((mmap_entry_t *)mem_info_ptr->mmap_addr,
 		mem_info_ptr->mmap_length);
 
+	gdt_init();
 	scheduler_init();
 	setup_main_task(shell_main, 0);
 

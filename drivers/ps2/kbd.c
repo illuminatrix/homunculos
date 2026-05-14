@@ -15,6 +15,9 @@ static volatile int kbd_tail;
 static int kbd_shift;
 static int kbd_caps;
 
+/* Track which keys are currently held down (1 bit per scancode 0-127) */
+static uint8_t kbd_key_state[16];
+
 static struct file kbd_file;
 
 static const char kbd_scan_normal[128] = {
@@ -79,10 +82,19 @@ static void kbd_process_scancode(uint8_t scancode)
 	if (scancode & 0x80)
 	{
 		scancode &= 0x7F;
+		/* Key released - clear key state */
+		kbd_key_state[scancode / 8] &= ~(1 << (scancode % 8));
 		if (scancode == 0x2A || scancode == 0x36)
 			kbd_shift = 0;
 		return;
 	}
+
+	/* Typematic repeat: suppress if key is already held down */
+	if (kbd_key_state[scancode / 8] & (1 << (scancode % 8)))
+		return;
+
+	/* Mark key as held down */
+	kbd_key_state[scancode / 8] |= (1 << (scancode % 8));
 
 	if (scancode == 0x2A || scancode == 0x36)
 	{
@@ -165,10 +177,13 @@ static int ps2_wait_write(void)
 }
 static void ps2_keyboard_init(void)
 {
+	int i;
 	kbd_head = 0;
 	kbd_tail = 0;
 	kbd_shift = 0;
 	kbd_caps = 0;
+	for (i = 0; i < 16; i++)
+		kbd_key_state[i] = 0;
 
 	irq_request(1, kbd_irq_handler);
 

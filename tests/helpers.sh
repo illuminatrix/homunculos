@@ -153,15 +153,15 @@ send_keys() {
 			[0-9]) key_name="$ch" ;;
 			*)     key_name="$ch" ;;
 		esac
-		monitor_cmd "sendkey $key_name" >/dev/null 2>&1
+		monitor_cmd "sendkey $key_name 1" >/dev/null 2>&1
 		sleep "$delay"
 	done
 }
 
 pass() {
-	echo "  $PASS $1"
+	printf "  \033[32m$PASS\033[0m $1\n"
 }
 
 fail() {
-	echo "  $FAIL $1"
+	printf "  \033[31m$FAIL\033[0m $1\n"
 }

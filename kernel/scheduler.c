@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "task.h"
 #include "pit.h"
+#include "gdt.h"
 #include <string.h>
 
 static struct task *run_queue_head = 0;
@@ -84,6 +85,9 @@ void schedule(void) {
 	if (next == prev)
 		return;
 
+	if (next->is_user)
+		tss_set_kernel_stack((uint32_t)(next->stack + TASK_STACK_SIZE));
+
 	if (prev) {
 		current_task = next;
 		next->state = TASK_STATE_RUNNING;
@@ -92,7 +96,12 @@ void schedule(void) {
 	} else {
 		current_task = next;
 		next->state = TASK_STATE_RUNNING;
-		extern void context_restore(struct task_context*);
-		context_restore(next->context);
+		if (next->is_user) {
+			extern void context_restore_user(struct task_context*);
+			context_restore_user(next->context);
+		} else {
+			extern void context_restore(struct task_context*);
+			context_restore(next->context);
+		}
 	}
 }

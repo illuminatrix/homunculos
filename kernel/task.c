@@ -2,6 +2,7 @@
 #include "scheduler.h"
 #include "vfs.h"
 #include "mm.h"
+#include "gdt.h"
 #include <string.h>
 
 static struct task tasks[MAX_TASKS];
@@ -21,6 +22,7 @@ struct task *task_alloc(void)
 	t->stack = task_stacks[next_pid];
 	t->next = 0;
 	t->pdir = kernel_pdir;
+	t->is_user = 0;
 	next_pid++;
 
 	return t;
@@ -45,6 +47,7 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 		child->fd_table[i] = parent->fd_table[i];
 
 	child->pdir = parent->pdir;
+	child->is_user = parent->is_user;
 
 	/*
 	 * Copy parent's stack data below the int $0x80 frame to child.
@@ -65,22 +68,41 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	 */
 	uint32_t parent_ebp_val = *(uint32_t *)parent_fp;
 	uint32_t stack_bottom = (uint32_t)(parent->stack + TASK_STACK_SIZE);
-	uint32_t below_size = stack_bottom - (parent_fp + 32);
 
 	/*
 	 * Build child's stack from bottom (high addr) to top (low addr):
-	 *   [data below int $0x80 frame]   <- child's esp after fork_return iret
-	 *   [eflags]                       <- iret pops
+	 * For user mode (cs == 0x18):
+	 *   [ss = 0x20]                    <- iretl pops (if CS.DPL=3)
+	 *   [esp = child user stack top]
+	 *   [eflags]
+	 *   [cs = 0x18]
+	 *   [eip]
+	 *   [fork_return]                  <- context_restore ret pops; child->esp here
+	 *
+	 * For kernel mode (cs == 0x08):
+	 *   [eflags]
 	 *   [cs]
 	 *   [eip]
 	 *   [fork_return]                  <- context_restore ret pops; child->esp here
 	 */
 	uint32_t child_end = (uint32_t)(child->stack + TASK_STACK_SIZE);
+	uint32_t below_size;
+	int user_fork = (cs == GDT_USER_CODE);
+	if (user_fork) {
+		below_size = stack_bottom - (parent_fp + 40);
+	} else {
+		below_size = stack_bottom - (parent_fp + 32);
+	}
 	uint32_t dest = child_end - below_size;
 
-	memcpy((void *)dest, (void *)(parent_fp + 32), below_size);
+	memcpy((void *)dest, (void *)(parent_fp + (user_fork ? 40 : 32)), below_size);
 
-	uint32_t *sp = (uint32_t *)dest;
+	uint32_t *sp = (uint32_t *)(dest + below_size);
+
+	if (user_fork) {
+		*(--sp) = GDT_USER_DATA;             /* ss */
+		*(--sp) = child_end;                 /* esp */
+	}
 	*(--sp) = eflags;
 	*(--sp) = cs;
 	*(--sp) = eip;
