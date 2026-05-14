@@ -39,7 +39,10 @@ run-debug: kernel.bin
 gdb:
 	gdb -ix gdb_script.gdb
 
-.PHONY: clean quit
+.PHONY: test clean quit
+
+test: kernel.bin
+	$(MAKE) -C tests test
 
 quit:
 	echo quit | socat - UNIX-CONNECT:qemu-monitor.sock 2>/dev/null || echo "VM not running"
