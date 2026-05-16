@@ -12,6 +12,9 @@ string/strncpy.o \
 string/strcmp.o \
 unistd/fork.o \
 unistd/read.o \
+unistd/exec.o \
+unistd/join.o \
+unistd/exit.o \
 unistd/reboot.o \
 
 OBJS:=\

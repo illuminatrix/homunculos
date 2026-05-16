@@ -18,6 +18,8 @@ struct task *task_alloc(void)
 
 	struct task *t = &tasks[next_pid];
 	t->pid = next_pid;
+	t->parent_pid = -1;
+	t->exit_status = 0;
 	t->state = TASK_STATE_READY;
 	t->stack = task_stacks[next_pid];
 	t->next = 0;
@@ -46,6 +48,7 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	for (i = 0; i < VFS_MAX_FD; i++)
 		child->fd_table[i] = parent->fd_table[i];
 
+	child->parent_pid = parent->pid;
 	child->pdir = parent->pdir;
 	child->is_user = parent->is_user;
 
@@ -97,11 +100,23 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 
 	memcpy((void *)dest, (void *)(parent_fp + (user_fork ? 40 : 32)), below_size);
 
+	if (user_fork) {
+		/* copy user stack data from parent to child */
+		uint32_t user_esp = *(uint32_t *)(parent_fp + 32);
+		uint32_t user_stack_top = (uint32_t)(parent->stack
+					+ TASK_STACK_SIZE / 2);
+		uint32_t user_size = user_stack_top - user_esp;
+		uint32_t child_user_esp = (uint32_t)child->stack
+					+ (user_esp - (uint32_t)parent->stack);
+		memcpy((void *)child_user_esp, (void *)user_esp, user_size);
+	}
+
 	uint32_t *sp = (uint32_t *)(dest + below_size);
 
 	if (user_fork) {
-		*(--sp) = GDT_USER_DATA;             /* ss */
-		*(--sp) = child_end;                 /* esp */
+		*(--sp) = GDT_USER_DATA;                     /* ss */
+		*(--sp) = (uint32_t)(child->stack
+			   + TASK_STACK_SIZE / 2);          /* user esp (midpoint) */
 	}
 	*(--sp) = eflags;
 	*(--sp) = cs;
@@ -125,6 +140,26 @@ void task_exit(void)
 	current->state = TASK_STATE_EXITED;
 	task_yield();
 }
+
+void task_set_exit_status(int status)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return;
+	current->exit_status = status;
+}
+
+struct task *task_find_child_exited(int parent_pid)
+{
+	for (int i = 0; i < next_pid; i++) {
+		if (tasks[i].parent_pid == parent_pid
+		    && tasks[i].state == TASK_STATE_EXITED)
+			return &tasks[i];
+	}
+	return 0;
+}
+
+
 
 void task_yield(void)
 {

@@ -153,7 +153,7 @@ send_keys() {
 			[0-9]) key_name="$ch" ;;
 			*)     key_name="$ch" ;;
 		esac
-		monitor_cmd "sendkey $key_name 1" >/dev/null 2>&1
+		monitor_cmd "sendkey $key_name" >/dev/null 2>&1
 		sleep "$delay"
 	done
 }

@@ -82,3 +82,25 @@ void task_init_fork_context(struct task *child, uint32_t fork_esp, uint32_t fork
 	child->context->edi = 0;
 	child->context->pdir = (uint32_t)child->pdir;
 }
+
+void task_update_context_user(struct task *t, uint32_t entry,
+			      uint32_t user_esp_top)
+{
+	t->context = &task_contexts[t->pid];
+
+	uint32_t *ksp = (uint32_t *)(t->stack + TASK_STACK_SIZE);
+
+	*(--ksp) = GDT_USER_DATA;
+	*(--ksp) = user_esp_top;
+	*(--ksp) = 0x200;
+	*(--ksp) = GDT_USER_CODE;
+	*(--ksp) = entry;
+
+	t->context->esp = (uint32_t)ksp;
+	t->context->ebp = 0;
+	t->context->ebx = 0;
+	t->context->esi = 0;
+	t->context->edi = 0;
+	t->context->pdir = (uint32_t)t->pdir;
+	t->is_user = 1;
+}

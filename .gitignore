@@ -3,3 +3,5 @@ compile_commands.json
 *.o
 .cache
 serial.log
+examples/hello.elf
+qemu_int.log

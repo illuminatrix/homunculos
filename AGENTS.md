@@ -2,12 +2,12 @@
 
 ## Build System
 
-- **Compiler**: `gcc -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -m32 -fno-stack-protector`
+- **Compiler**: `gcc -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector`
 - **Assembler**: `as --32`
 - **Linker**: `ld -melf_i386 -T arch/i386/kernel.ld`
 - **Output**: `kernel.bin` (Multiboot flat binary, loaded at 1MB)
 - **Include path**: `-Ilibc/include -Ikernel -Ishell -Iarch/i386/`
-- **Build**: flat `OBJS` accumulated via `include` chains of `Makefile.mk` files
+- **Build**: flat `OBJS` accumulated via `include` chains of `Makefile.mk` files. libc is built separately via `cd libc && make` during link step.
 
 ### Make Targets
 
@@ -89,6 +89,8 @@ All structs are fully defined in `.h` files (no opaque structs). No dynamic allo
 | 2 | SYS_fork | `sys_fork` | `int sys_fork(void)` |
 | 3 | SYS_read | `sys_read` | `int sys_read(int fd, void *buf, size_t len)` |
 | 4 | SYS_write | `sys_write` | `int sys_write(int fd, const void *buf, size_t len)` |
+| 5 | SYS_exec | `sys_exec` | `int sys_exec(const void *elf_buf)` |
+| 6 | SYS_join | `sys_join` | `int sys_join(void)` |
 | 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |
 | 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(void)` |
 
@@ -97,6 +99,10 @@ Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.
 `sys_write`/`sys_read` fall back to global VFS files when `scheduler_get_current()` is NULL (early boot).
 
 `sys_fork` reads eip/cs/eflags from the stack frame (ebp+20/24/28) to pass to `task_fork()`.
+
+`sys_exec` validates and loads an ELF32 binary, creates a new page directory with user mappings, and overwrites the current task's iretl frame with the ELF entry point. ELF loading is implemented in `kernel/elf.c` (validate, load segments, copy content).
+
+`sys_join` blocks until a child task exits, then returns the child PID.
 
 ### Task / Scheduler
 
@@ -158,7 +164,7 @@ tests/               -- QEMU integration tests
 - **EOI required after every IRQ**: `out(0x20, 0x20)`; for slave IRQs (8-15) also `out(0xA0, 0x20)`.
 - **QEMU SMM breaks paging**: Use `-machine smm=off` when debugging paging issues.
 - **TSS.ESP0 must be updated for user tasks**: `schedule()` calls `tss_set_kernel_stack(next->stack + 4096)` when next->is_user is set. If the TSS stack pointer is wrong, a ring 3 interrupt will corrupt kernel memory.
-- **fork_return trampoline**: Child gets `eax=0` from a synthetic `int $0x80` return frame in `fork_return`, not from `sys_fork`.
+- **fork_return trampoline**: `task_fork()` pushes `fork_return` as the context_restore return address on the child's stack. `fork_return` does `mov $0, %eax; iretl`, so the child sees eax=0 without actually executing `sys_fork`.
 - **Syscall fallback for early boot**: `sys_write`/`sys_read` use global VFS files when no current task exists.
 - **vsprintf null terminator not counted**: `str[written] = '\0'`, not `str[written++]`, to avoid extra NUL in output.
 - **`-fno-stack-protector` in root CFLAGS**: Stack buffers in kernel code (e.g. shell buf[64]) trigger __stack_chk_fail without this flag.
@@ -173,6 +179,17 @@ make run              # curses display + serial.log + Unix socket monitor
 make run-debug        # same + -S -s (wait for GDB)
 make gdb              # gdb -ix gdb_script.gdb (connect to :1234)
 
+# Run integration tests
+make test             # runs tests/test-*.sh via tests/Makefile
+
+# Run a single test
+make -C tests test-boot
+make -C tests test-vga
+make -C tests test-shell
+make -C tests test-usermode
+make -C tests test-mmap
+make -C tests test-multiboot
+
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock
 
@@ -185,3 +202,5 @@ qemu-system-i386 -d int -D qemu.log -kernel kernel.bin
 # Stop VM
 make quit
 ```
+
+Test infrastructure (`tests/helpers.sh`): Starts QEMU with `-display none -no-reboot -monitor unix:...`, polls VGA buffer `0xB8000` via monitor `xp` commands, sends keystrokes via `sendkey`. Tests are shell scripts that source `helpers.sh`.

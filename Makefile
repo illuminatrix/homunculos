@@ -5,12 +5,14 @@ AS := as
 LD := ld
 ARCH := i386
 OBJDUMP := /usr/bin/objdump
+OBJCOPY := objcopy
 CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector -Ilibc/include -Ikernel -Ishell
 ASFLAGS := -32
 include arch/Makefile.mk
 include kernel/Makefile.mk
 include shell/Makefile.mk
 include drivers/Makefile.mk
+include examples/Makefile.mk
 QEMU_CMD := qemu-system-i386 -kernel kernel.bin -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait
 
 

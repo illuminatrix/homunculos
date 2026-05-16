@@ -19,6 +19,8 @@ struct task_context;
 
 struct task {
 	int pid;
+	int parent_pid;
+	int exit_status;
 	enum task_state state;
 	struct task_context *context;
 	uint8_t *stack;
@@ -36,5 +38,8 @@ void task_yield(void);
 void task_init_context(struct task *t, void (*entry)(void *), void *arg);
 void task_init_user_context(struct task *t, void (*entry)(void *), void *arg);
 void task_init_fork_context(struct task *child, uint32_t fork_esp, uint32_t fork_ebp);
+void task_set_exit_status(int status);
+struct task *task_find_child_exited(int parent_pid);
+void task_update_context_user(struct task *t, uint32_t entry, uint32_t user_esp_top);
 
 #endif
