@@ -174,3 +174,50 @@ uint32_t *mm_clone_pdir(uint32_t *parent_pdir)
 
 	return new_pdir;
 }
+
+int mm_map_at(uint32_t *pdir, uint32_t va, uint32_t pa, uint32_t flags)
+{
+	uint32_t pd_idx = va >> 22;
+	uint32_t pt_idx = (va >> 12) & 0x3FF;
+	uint32_t *pt;
+
+	if (!(pdir[pd_idx] & MM_PRESENT)) {
+		uint32_t *new_pt = (uint32_t *)mm_frame_alloc();
+		if (!new_pt)
+			return -1;
+		memset(new_pt, 0, FRAME);
+		pdir[pd_idx] = ((uint32_t)new_pt) | MM_PRESENT | MM_RW | MM_USER;
+	}
+
+	pt = (uint32_t *)(pdir[pd_idx] & ~0xFFF);
+
+	if (pt[pt_idx] & MM_PRESENT)
+		return -1;
+
+	pt[pt_idx] = (pa & ~0xFFF) | flags;
+
+	{
+		uint32_t cr3;
+		asm volatile("mov %%cr3, %0" : "=r"(cr3));
+		if (cr3 == (uint32_t)pdir)
+			asm volatile("invlpg %0" :: "m"(*(uint32_t *)va));
+	}
+
+	return 0;
+}
+
+uint32_t mm_alloc_at(uint32_t *pdir, uint32_t va, uint32_t flags)
+{
+	void *frame = mm_frame_alloc();
+	if (!frame)
+		return 0;
+
+	memset(frame, 0, FRAME);
+
+	if (mm_map_at(pdir, va, (uint32_t)frame, flags) < 0) {
+		mm_frame_free(frame);
+		return 0;
+	}
+
+	return va;
+}
