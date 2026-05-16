@@ -158,6 +158,34 @@ send_keys() {
 	done
 }
 
+# Check that the current CPU mode is ring 3 (user mode) via CS register
+# CS should be 0x001b (GDT_USER_CODE index 3, RPL=3)
+# Returns 0 if user mode, 1 if not
+check_user_mode() {
+	local regs
+	regs=$(monitor_cmd "info registers" 2>/dev/null)
+	local cs_val
+	cs_val=$(echo "$regs" | grep -E '^CS\s*=' | sed 's/.*=[[:space:]]*\([0-9a-fA-F]\{4\}\).*/\1/' | tr '[:upper:]' '[:lower:]')
+	[ "$cs_val" = "001b" ]
+}
+
+assert_user_mode() {
+	local msg="${1:-User mode (ring 3) verification}"
+	local retries="${2:-5}"
+	local i
+	for ((i = 0; i < retries; i++)); do
+		if check_user_mode; then
+			pass "$msg"
+			return 0
+		fi
+		sleep 0.2
+	done
+	local cs_val
+	cs_val=$(monitor_cmd "info registers" 2>/dev/null | grep -E '^CS\s*=' | sed 's/.*=[[:space:]]*\([0-9a-fA-F]\{4\}\).*/\1/')
+	fail "$msg - CS=0x${cs_val}, expected 0x001b (ring 3)"
+	return 1
+}
+
 pass() {
 	printf "  \033[32m$PASS\033[0m $1\n"
 }

@@ -36,6 +36,9 @@ fi
 
 sleep 2
 
+assert_user_mode "Subtest 1: Ring 3 CS register after boot"
+errors=$((errors + $?))
+
 # --- Subtest 2: Shell prompt ---
 if vga_contains ">"; then
 	pass "Shell prompt '>' in VGA (user mode task running in ring 3)"
@@ -44,6 +47,9 @@ else
 	fail "Shell prompt not found. VGA tail: [$dump_tail]"
 	errors=$((errors + 1))
 fi
+
+assert_user_mode "Subtest 2: Ring 3 CS register after shell prompt"
+errors=$((errors + $?))
 
 # --- Subtest 3: Greeting command (syscall from ring 3) ---
 for ch in g r e e t i n g; do
@@ -62,6 +68,9 @@ else
 	errors=$((errors + 1))
 fi
 
+assert_user_mode "Subtest 3: Ring 3 CS register after greeting syscall"
+errors=$((errors + $?))
+
 # --- Subtest 4: Character echo while typing ---
 # Type a short word character by character; the shell echoes each one.
 # This confirms the read/write syscall loop works from ring 3.
@@ -79,6 +88,9 @@ else
 	fail "Echoed text not found. VGA tail: [$vga_raw]"
 	errors=$((errors + 1))
 fi
+
+assert_user_mode "Subtest 4: Ring 3 CS register after character echo"
+errors=$((errors + $?))
 
 # Clear the buffer by sending a newline (ignores the typed text as unknown command)
 monitor_cmd "sendkey ret" >/dev/null 2>&1
