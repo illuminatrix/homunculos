@@ -6,9 +6,10 @@ check_deps qemu-system-i386 socat || exit 1
 
 echo "=== tmpfs Filesystem Test ==="
 echo "  Subtest 1: Shell prompt '>' appears after boot"
-echo "  Subtest 2: 'ls' shows 'dev' directory"
-echo "  Subtest 3: 'cat /dev/hello' shows 'hello fs'"
-echo "  Subtest 4: 'poweroff' shuts down QEMU (regression)"
+echo "  Subtest 2: 'ls' shows 'dev' in root"
+echo "  Subtest 3: 'ls /dev' shows 'hello'"
+echo "  Subtest 4: 'cat /dev/hello' shows 'hello fs'"
+echo "  Subtest 5: 'poweroff' shuts down QEMU (regression)"
 
 qemu_start 15 || { fail "QEMU failed to start"; exit 1; }
 
@@ -33,7 +34,7 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- Subtest 2: ls command ---
+# --- Subtest 2: ls (root) ---
 for ch in l s; do
 	monitor_cmd "sendkey $ch" >/dev/null 2>&1
 	sleep 0.08
@@ -50,7 +51,24 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- Subtest 3: cat /dev/hello ---
+# --- Subtest 3: ls /dev ---
+for ch in l s spc slash d e v; do
+	monitor_cmd "sendkey $ch" >/dev/null 2>&1
+	sleep 0.08
+done
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 3
+
+vga_full=$(vga_text)
+if echo "$vga_full" | grep -q "hello"; then
+	pass "'ls /dev' shows 'hello' file"
+else
+	fail "'hello' not found in 'ls /dev' output. VGA tail: [$(echo "$vga_full" | tail -c 200)]"
+	errors=$((errors + 1))
+fi
+
+# --- Subtest 4: cat /dev/hello ---
 for ch in c a t spc slash d e v slash h e l l o; do
 	monitor_cmd "sendkey $ch" >/dev/null 2>&1
 	sleep 0.08
@@ -68,7 +86,7 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- Subtest 4: poweroff regression ---
+# --- Subtest 5: poweroff regression ---
 for ch in p o w e r o f f; do
 	monitor_cmd "sendkey $ch" >/dev/null 2>&1
 	sleep 0.08

@@ -62,9 +62,9 @@ static void cmd_run(void)
 	printf("child %d done\n", child_pid);
 }
 
-static void cmd_ls(void)
+static void cmd_ls(const char *path)
 {
-	int fd = open("/", 0);
+	int fd = open(path, 0);
 	if (fd < 0) {
 		printf("open failed\n");
 		return;
@@ -103,7 +103,9 @@ static void shell_execute(const char *buf)
 	else if (strcmp(buf, "run") == 0)
 		cmd_run();
 	else if (strcmp(buf, "ls") == 0)
-		cmd_ls();
+		cmd_ls("/");
+	else if (strncmp(buf, "ls ", 3) == 0)
+		cmd_ls(buf + 3);
 	else if (strncmp(buf, "cat ", 4) == 0)
 		cmd_cat(buf + 4);
 	else if (buf[0] != '\0')
