@@ -173,6 +173,87 @@ int vfs_register_by_path(const char *path, struct vfs_inode *inode)
 	}
 }
 
+/* === Device Registration === */
+
+static struct vfs_device vfs_devices[VFS_MAX_DEVICES];
+static int vfs_device_count;
+
+int vfs_register_device(const char *name, const struct vfs_ops *ops,
+			void *private_data)
+{
+	if (vfs_device_count >= VFS_MAX_DEVICES || !name || !ops)
+		return -1;
+	vfs_devices[vfs_device_count].name = name;
+	vfs_devices[vfs_device_count].ops = ops;
+	vfs_devices[vfs_device_count].private_data = private_data;
+	vfs_device_count++;
+	return 0;
+}
+
+static int dev_inode_read(struct vfs_inode *inode, uint32_t offset,
+			  void *buf, uint32_t size)
+{
+	struct vfs_device *dev = (struct vfs_device *)inode->private_data;
+	struct file f;
+	(void)offset;
+	if (!dev->ops->read)
+		return -1;
+	f.ops = dev->ops;
+	f.private_data = dev->private_data;
+	return dev->ops->read(&f, buf, size);
+}
+
+static int dev_inode_write(struct vfs_inode *inode, uint32_t offset,
+			   const void *buf, uint32_t size)
+{
+	struct vfs_device *dev = (struct vfs_device *)inode->private_data;
+	struct file f;
+	(void)offset;
+	if (!dev->ops->write)
+		return -1;
+	f.ops = dev->ops;
+	f.private_data = dev->private_data;
+	return dev->ops->write(&f, buf, size);
+}
+
+static struct vfs_inode_ops vfs_dev_inode_ops = {
+	.read      = dev_inode_read,
+	.write     = dev_inode_write,
+	.readdir   = 0,
+	.lookup    = 0,
+	.add_entry = 0,
+};
+
+void vfs_create_device_nodes(void)
+{
+	int i;
+	for (i = 0; i < vfs_device_count; i++) {
+		struct vfs_inode *inode = vfs_alloc_inode();
+		char path[64];
+		int pi;
+		const char *src;
+
+		if (!inode)
+			continue;
+
+		inode->i_type = VFS_IFILE;
+		inode->i_size = 0;
+		inode->ops = &vfs_dev_inode_ops;
+		inode->private_data = &vfs_devices[i];
+
+		pi = 0;
+		src = "/dev/";
+		while (*src && pi < (int)sizeof(path) - 1)
+			path[pi++] = *src++;
+		src = vfs_devices[i].name;
+		while (*src && pi < (int)sizeof(path) - 1)
+			path[pi++] = *src++;
+		path[pi] = '\0';
+
+		vfs_register_by_path(path, inode);
+	}
+}
+
 struct file *vfs_open_file(struct vfs_inode *inode)
 {
 	int i;
@@ -228,8 +309,8 @@ static int vfs_file_read(struct file *f, void *buf, size_t nbyte)
 
 static int vfs_file_write(struct file *f, const void *buf, size_t nbyte)
 {
-	(void)f;
-	(void)buf;
-	(void)nbyte;
-	return -1;
+	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
+	if (!inode || !inode->ops || !inode->ops->write)
+		return -1;
+	return inode->ops->write(inode, 0, buf, nbyte);
 }

@@ -199,5 +199,7 @@ static void ps2_keyboard_init(void)
 	kbd_file.private_data = 0;
 
 	vfs_stdin = &kbd_file;
+
+	vfs_register_device("kbd", &kbd_ops, 0);
 }
 VFS_DRIVER_INIT(ps2_keyboard_init);

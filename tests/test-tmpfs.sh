@@ -61,10 +61,10 @@ monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 3
 
 vga_full=$(vga_text)
-if echo "$vga_full" | grep -q "hello"; then
-	pass "'ls /dev' shows 'hello' file"
+if echo "$vga_full" | grep -q "hello" && echo "$vga_full" | grep -q "vga" && echo "$vga_full" | grep -q "kbd"; then
+	pass "'ls /dev' shows 'hello', 'vga', 'kbd'"
 else
-	fail "'hello' not found in 'ls /dev' output. VGA tail: [$(echo "$vga_full" | tail -c 200)]"
+	fail "'ls /dev' missing entries. VGA tail: [$(echo "$vga_full" | tail -c 200)]"
 	errors=$((errors + 1))
 fi
 

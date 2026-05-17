@@ -45,6 +45,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	vfs_init();
 	vfs_inode_init();
 	tmpfs_init();
+	vfs_create_device_nodes();
 	hello_driver_init();
 
 	welcome();

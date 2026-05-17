@@ -128,5 +128,7 @@ static void vga_text_init(void)
 
 	vfs_stdout = &vga_stdout_file;
 	vfs_stderr = &vga_stderr_file;
+
+	vfs_register_device("vga", &vga_ops, &stdout_priv);
 }
 VFS_DRIVER_INIT(vga_text_init);
