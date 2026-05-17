@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include <string.h>
 
 /* Linker symbols for .driver_init section */
 extern vfs_driver_init_fn __driver_init_start[];
@@ -29,4 +30,206 @@ struct file *vfs_get_stdout(void)
 struct file *vfs_get_stderr(void)
 {
 	return vfs_stderr;
+}
+
+/* === Inode Layer === */
+
+static struct vfs_inode vfs_inodes[VFS_MAX_INODES];
+static int vfs_next_ino = 1;
+
+static struct file vfs_open_files[VFS_MAX_OPEN_FILES];
+static int vfs_open_file_count;
+
+static struct vfs_inode *vfs_root;
+
+static int vfs_file_read(struct file *f, void *buf, size_t nbyte);
+static int vfs_file_write(struct file *f, const void *buf, size_t nbyte);
+
+static struct vfs_ops vfs_file_ops = {
+	.read  = vfs_file_read,
+	.write = vfs_file_write,
+};
+
+void vfs_inode_init(void)
+{
+	int i;
+	for (i = 0; i < VFS_MAX_INODES; i++)
+		vfs_inodes[i].i_no = 0;
+	vfs_next_ino = 1;
+	vfs_open_file_count = 0;
+	vfs_root = 0;
+}
+
+struct vfs_inode *vfs_alloc_inode(void)
+{
+	int i;
+	for (i = 0; i < VFS_MAX_INODES; i++) {
+		if (vfs_inodes[i].i_no == 0) {
+			vfs_inodes[i].i_no = vfs_next_ino++;
+			vfs_inodes[i].i_size = 0;
+			vfs_inodes[i].i_type = VFS_IFILE;
+			vfs_inodes[i].ops = 0;
+			vfs_inodes[i].private_data = 0;
+			return &vfs_inodes[i];
+		}
+	}
+	return 0;
+}
+
+void vfs_free_inode(struct vfs_inode *inode)
+{
+	if (!inode)
+		return;
+	inode->i_no = 0;
+}
+
+void vfs_set_root_inode(struct vfs_inode *inode)
+{
+	vfs_root = inode;
+}
+
+struct vfs_inode *vfs_root_inode(void)
+{
+	return vfs_root;
+}
+
+struct vfs_inode *vfs_resolve_path(const char *path)
+{
+	struct vfs_inode *current = vfs_root_inode();
+	char buf[64];
+	int i;
+
+	if (!current || !path)
+		return 0;
+
+	if (*path == '/')
+		path++;
+	if (*path == '\0')
+		return current;
+
+	while (*path) {
+		i = 0;
+		while (*path && *path != '/' && i < (int)sizeof(buf) - 1) {
+			buf[i++] = *path++;
+		}
+		buf[i] = '\0';
+
+		if (!current->ops || !current->ops->lookup)
+			return 0;
+		current = current->ops->lookup(current, buf);
+		if (!current)
+			return 0;
+
+		if (*path == '/')
+			path++;
+	}
+
+	return current;
+}
+
+int vfs_register_by_path(const char *path, struct vfs_inode *inode)
+{
+	const char *p;
+	int i;
+
+	if (!path || !inode)
+		return -1;
+
+	p = path;
+	if (*p == '/')
+		p++;
+	if (*p == '\0')
+		return -1;
+
+	/* Find last '/' to split parent path from entry name */
+	const char *last_slash = 0;
+	const char *q = p;
+	while (*q) {
+		if (*q == '/')
+			last_slash = q;
+		q++;
+	}
+
+	if (last_slash) {
+		/* Has parent path; build parent path string */
+		char parent_path[64];
+		int pi = 0;
+		parent_path[pi++] = '/';
+		for (i = 0; &p[i] < last_slash; i++)
+			parent_path[pi++] = p[i];
+		parent_path[pi] = '\0';
+
+		struct vfs_inode *parent = vfs_resolve_path(parent_path);
+		if (!parent || !parent->ops || !parent->ops->add_entry)
+			return -1;
+
+		return parent->ops->add_entry(parent, last_slash + 1, inode);
+	} else {
+		/* Single component — add to root */
+		struct vfs_inode *root = vfs_root_inode();
+		if (!root || !root->ops || !root->ops->add_entry)
+			return -1;
+		return root->ops->add_entry(root, p, inode);
+	}
+}
+
+struct file *vfs_open_file(struct vfs_inode *inode)
+{
+	int i;
+	if (!inode)
+		return 0;
+	for (i = 0; i < VFS_MAX_OPEN_FILES; i++) {
+		if (vfs_open_files[i].ops == 0) {
+			vfs_open_files[i].ops = &vfs_file_ops;
+			vfs_open_files[i].private_data = inode;
+			return &vfs_open_files[i];
+		}
+	}
+	return 0;
+}
+
+void vfs_close_file(struct file *f)
+{
+	if (!f)
+		return;
+	f->ops = 0;
+	f->private_data = 0;
+}
+
+static int vfs_file_read(struct file *f, void *buf, size_t nbyte)
+{
+	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
+	if (!inode || !inode->ops)
+		return -1;
+
+	if (inode->i_type == VFS_IDIR) {
+		/* Pack directory entries as space-separated names */
+		char *dst = (char *)buf;
+		int written = 0;
+		int idx = 0;
+		struct vfs_dirent dent;
+		if (!inode->ops->readdir)
+			return -1;
+		while (inode->ops->readdir(inode, idx++, &dent) == 0) {
+			int len = strlen(dent.d_name);
+			if (written + len + 1 > (int)nbyte)
+				break;
+			memcpy(dst + written, dent.d_name, len);
+			written += len;
+			dst[written++] = ' ';
+		}
+		return written;
+	}
+
+	if (!inode->ops->read)
+		return -1;
+	return inode->ops->read(inode, 0, buf, nbyte);
+}
+
+static int vfs_file_write(struct file *f, const void *buf, size_t nbyte)
+{
+	(void)f;
+	(void)buf;
+	(void)nbyte;
+	return -1;
 }

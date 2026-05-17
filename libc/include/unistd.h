@@ -10,6 +10,8 @@ extern "C" {
 
 int fork(void);
 int read(int, void *, size_t);
+int open(const char *, int);
+int close(int);
 int exec(const void *);
 int join(void);
 int reboot(void);

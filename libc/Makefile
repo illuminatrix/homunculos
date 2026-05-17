@@ -10,8 +10,12 @@ string/memset.o \
 string/strlen.o \
 string/strncpy.o \
 string/strcmp.o \
+string/strncmp.o \
+string/strcpy.o \
 unistd/fork.o \
 unistd/read.o \
+unistd/open.o \
+unistd/close.o \
 unistd/exec.o \
 unistd/join.o \
 unistd/exit.o \

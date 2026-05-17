@@ -5,3 +5,4 @@ compile_commands.json
 serial.log
 examples/hello.elf
 qemu_int.log
+qemu.log

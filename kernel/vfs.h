@@ -39,4 +39,48 @@ struct file *vfs_get_stdin(void);
 struct file *vfs_get_stdout(void);
 struct file *vfs_get_stderr(void);
 
+/* === VFS Inode Layer === */
+
+#define VFS_IFILE 0
+#define VFS_IDIR  1
+
+struct vfs_dirent {
+	uint32_t d_ino;
+	char d_name[64];
+};
+
+struct vfs_inode;
+struct vfs_inode_ops {
+	int (*read)(struct vfs_inode *inode, uint32_t offset,
+		    void *buf, uint32_t size);
+	int (*readdir)(struct vfs_inode *dir, uint32_t index,
+		       struct vfs_dirent *dent);
+	struct vfs_inode *(*lookup)(struct vfs_inode *dir,
+				    const char *name);
+	int (*add_entry)(struct vfs_inode *dir, const char *name,
+			 struct vfs_inode *entry);
+};
+
+struct vfs_inode {
+	uint32_t i_no;
+	uint32_t i_size;
+	uint16_t i_type;
+	const struct vfs_inode_ops *ops;
+	void *private_data;
+};
+
+#define VFS_MAX_INODES    64
+#define VFS_MAX_OPEN_FILES 16
+
+void vfs_inode_init(void);
+struct vfs_inode *vfs_alloc_inode(void);
+void vfs_free_inode(struct vfs_inode *inode);
+struct vfs_inode *vfs_root_inode(void);
+
+void vfs_set_root_inode(struct vfs_inode *inode);
+struct vfs_inode *vfs_resolve_path(const char *path);
+int vfs_register_by_path(const char *path, struct vfs_inode *inode);
+struct file *vfs_open_file(struct vfs_inode *inode);
+void vfs_close_file(struct file *f);
+
 #endif

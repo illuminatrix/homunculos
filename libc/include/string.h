@@ -16,6 +16,8 @@ void* memset(void*, int, size_t);
 size_t strlen(const char*);
 char* strncpy(char* __restrict, const char* __restrict, size_t);
 int strcmp(const char*, const char*);
+int strncmp(const char*, const char*, size_t);
+char* strcpy(char* __restrict, const char* __restrict);
 
 #ifdef __cplusplus
 }

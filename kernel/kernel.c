@@ -8,6 +8,8 @@
 #include "scheduler.h"
 #include "task.h"
 #include "vfs.h"
+#include "tmpfs.h"
+#include "drivers/hello/hello.h"
 #include "shell.h"
 #include "gdt.h"
 
@@ -41,6 +43,9 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	pic_init();
 	load_idt();
 	vfs_init();
+	vfs_inode_init();
+	tmpfs_init();
+	hello_driver_init();
 
 	welcome();
 	init_mm((mmap_entry_t *)mem_info_ptr->mmap_addr,

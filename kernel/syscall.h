@@ -7,6 +7,8 @@
 #define SYS_write       4
 #define SYS_exec        5
 #define SYS_join        6
+#define SYS_open        7
+#define SYS_close       8
 #define SYS_sched_yield 24
 #define SYS_reboot      88
 

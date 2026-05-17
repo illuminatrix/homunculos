@@ -38,6 +38,62 @@ static void poweroff(void)
 }
 
 int
+sys_open(const char *path, int flags)
+{
+	struct vfs_inode *inode;
+	struct file *f;
+	int fd;
+	struct task *current = scheduler_get_current();
+
+	(void)flags;
+
+	inode = vfs_resolve_path(path);
+	if (!inode)
+		return -1;
+
+	f = vfs_open_file(inode);
+	if (!f)
+		return -1;
+
+	if (!current) {
+		/* early boot, no task — can't allocate an fd */
+		return -1;
+	}
+
+	for (fd = 0; fd < VFS_MAX_FD; fd++) {
+		if (current->fd_table[fd] == 0) {
+			current->fd_table[fd] = f;
+			return fd;
+		}
+	}
+
+	vfs_close_file(f);
+	return -1;
+}
+
+int
+sys_close(int fd)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+	if (fd < 3)
+		return -1; /* don't close stdin/stdout/stderr */
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	current->fd_table[fd] = 0;
+	vfs_close_file(f);
+	return 0;
+}
+
+int
 sys_write(int fd, const void *buf, size_t len)
 {
 	struct task *current = scheduler_get_current();
@@ -228,6 +284,8 @@ syscall_init(void)
 	systemcall_table[SYS_write]       = (uint32_t)sys_write;
 	systemcall_table[SYS_exec]        = (uint32_t)sys_exec;
 	systemcall_table[SYS_join]        = (uint32_t)sys_join;
+	systemcall_table[SYS_open]        = (uint32_t)sys_open;
+	systemcall_table[SYS_close]       = (uint32_t)sys_close;
 	systemcall_table[SYS_sched_yield] = (uint32_t)sys_yield;
 	systemcall_table[SYS_reboot]      = (uint32_t)sys_reboot;
 }

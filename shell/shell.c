@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include "vfs.h"
 #include "task.h"
 
 #define SHELL_BUF_SIZE 64
@@ -61,6 +62,38 @@ static void cmd_run(void)
 	printf("child %d done\n", child_pid);
 }
 
+static void cmd_ls(void)
+{
+	int fd = open("/", 0);
+	if (fd < 0) {
+		printf("open failed\n");
+		return;
+	}
+	char buf[128];
+	int n = read(fd, buf, sizeof(buf) - 1);
+	if (n < 0)
+		n = 0;
+	buf[n] = '\0';
+	printf("%s\n", buf);
+	close(fd);
+}
+
+static void cmd_cat(const char *name)
+{
+	int fd = open(name, 0);
+	if (fd < 0) {
+		printf("open failed\n");
+		return;
+	}
+	char buf[128];
+	int n = read(fd, buf, sizeof(buf) - 1);
+	if (n < 0)
+		n = 0;
+	buf[n] = '\0';
+	printf("%s\n", buf);
+	close(fd);
+}
+
 static void shell_execute(const char *buf)
 {
 	if (strcmp(buf, "poweroff") == 0)
@@ -69,6 +102,10 @@ static void shell_execute(const char *buf)
 		printf("hello\n");
 	else if (strcmp(buf, "run") == 0)
 		cmd_run();
+	else if (strcmp(buf, "ls") == 0)
+		cmd_ls();
+	else if (strncmp(buf, "cat ", 4) == 0)
+		cmd_cat(buf + 4);
 	else if (buf[0] != '\0')
 		printf("unknown\n");
 }
