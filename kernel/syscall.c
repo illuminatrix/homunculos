@@ -103,7 +103,13 @@ sys_write(int fd, const void *buf, size_t len)
 		return -1;
 
 	if (!current) {
-		f = fd == 2 ? vfs_get_stderr() : vfs_get_stdout();
+		static struct file *boot_out;
+		if (!boot_out) {
+			struct vfs_inode *ino = vfs_resolve_path("/dev/vga");
+			if (ino)
+				boot_out = vfs_open_file(ino);
+		}
+		f = boot_out;
 	} else {
 		f = current->fd_table[fd];
 	}
@@ -132,7 +138,13 @@ sys_read(int fd, void *buf, size_t len)
 		return -1;
 
 	if (!current) {
-		f = vfs_get_stdin();
+		static struct file *boot_in;
+		if (!boot_in) {
+			struct vfs_inode *ino = vfs_resolve_path("/dev/kbd");
+			if (ino)
+				boot_in = vfs_open_file(ino);
+		}
+		f = boot_in;
 	} else {
 		f = current->fd_table[fd];
 	}

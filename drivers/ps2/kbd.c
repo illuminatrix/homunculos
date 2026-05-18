@@ -18,8 +18,6 @@ static int kbd_caps;
 /* Track which keys are currently held down (1 bit per scancode 0-127) */
 static uint8_t kbd_key_state[16];
 
-static struct file kbd_file;
-
 static const char kbd_scan_normal[128] = {
 	  0,  0x1B, '1',  '2',  '3',  '4',  '5',  '6',
 	'7',  '8',  '9',  '0',  '-',  '=',  '\b', '\t',
@@ -194,11 +192,6 @@ static void ps2_keyboard_init(void)
 	/* Enable keyboard scanning */
 	ps2_wait_write();
 	out(PS2_DATA, 0xF4);
-
-	kbd_file.ops = &kbd_ops;
-	kbd_file.private_data = 0;
-
-	vfs_stdin = &kbd_file;
 
 	vfs_register_device("kbd", &kbd_ops, 0);
 }

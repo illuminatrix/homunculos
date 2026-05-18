@@ -24,9 +24,9 @@ static void setup_main_task(void (*entry)(void *), void *arg)
 	if (!t)
 		return;
 
-	t->fd_table[0] = vfs_get_stdin();
-	t->fd_table[1] = vfs_get_stdout();
-	t->fd_table[2] = vfs_get_stderr();
+	t->fd_table[0] = vfs_open_file(vfs_resolve_path("/dev/kbd"));
+	t->fd_table[1] = vfs_open_file(vfs_resolve_path("/dev/vga"));
+	t->fd_table[2] = vfs_open_file(vfs_resolve_path("/dev/vgaerr"));
 
 	strncpy(t->name, "main", TASK_NAME_LEN - 1);
 	t->name[TASK_NAME_LEN - 1] = '\0';

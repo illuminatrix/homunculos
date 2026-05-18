@@ -23,10 +23,6 @@ static struct vga_cursor vga_cursor;
 static struct vga_file_priv stdout_priv;
 static struct vga_file_priv stderr_priv;
 
-/* static file structs */
-static struct file vga_stdout_file;
-static struct file vga_stderr_file;
-
 static int vga_text_write(struct file *file, const void *buf, size_t nbyte);
 static void vga_update_cursor(struct vga_cursor *cursor);
 
@@ -120,15 +116,7 @@ static void vga_text_init(void)
 	stderr_priv.cursor = &vga_cursor;
 	stderr_priv.color  = 0x04; /* red on black */
 
-	vga_stdout_file.ops          = &vga_ops;
-	vga_stdout_file.private_data = &stdout_priv;
-
-	vga_stderr_file.ops          = &vga_ops;
-	vga_stderr_file.private_data = &stderr_priv;
-
-	vfs_stdout = &vga_stdout_file;
-	vfs_stderr = &vga_stderr_file;
-
 	vfs_register_device("vga", &vga_ops, &stdout_priv);
+	vfs_register_device("vgaerr", &vga_ops, &stderr_priv);
 }
 VFS_DRIVER_INIT(vga_text_init);
