@@ -2,7 +2,7 @@ TESTS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 KERNEL_DIR := $(TESTS_DIR)/..
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 
-TEST_SCRIPTS := test-multiboot test-boot test-vga test-shell test-usermode test-mmap test-exec test-tmpfs
+TEST_SCRIPTS := test-multiboot test-boot test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
 
 .PHONY: all test $(TEST_SCRIPTS) clean
@@ -38,6 +38,9 @@ test-exec: $(KERNEL_BIN)
 
 test-tmpfs: $(KERNEL_BIN)
 	@$(TESTS_DIR)/test-tmpfs.sh
+
+test-ext2: $(KERNEL_BIN)
+	@$(TESTS_DIR)/test-ext2.sh
 
 clean:
 	rm -f $(TESTS_DIR)/*.sock

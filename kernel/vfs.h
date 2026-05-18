@@ -63,7 +63,7 @@ struct vfs_inode {
 	void *private_data;
 };
 
-#define VFS_MAX_INODES     64
+#define VFS_MAX_INODES     256
 #define VFS_MAX_OPEN_FILES 16
 #define VFS_MAX_DEVICES    8
 
@@ -86,5 +86,19 @@ int vfs_register_device(const char *name, const struct vfs_ops *ops,
 void vfs_create_device_nodes(void);
 struct file *vfs_open_file(struct vfs_inode *inode);
 void vfs_close_file(struct file *f);
+
+/* === Mount Abstraction === */
+
+#define VFS_MAX_MOUNTS 8
+
+struct vfs_mount {
+	struct vfs_inode *mount_point;
+	struct vfs_inode *root;
+};
+
+struct vfs_mount *vfs_mount_create(struct vfs_inode *mount_point,
+				   struct vfs_inode *fs_root);
+void vfs_mount_destroy(struct vfs_mount *mnt);
+struct vfs_inode *vfs_resolve_mount(struct vfs_inode *inode);
 
 #endif

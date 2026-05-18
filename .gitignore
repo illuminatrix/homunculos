@@ -6,3 +6,6 @@ serial.log
 examples/hello.elf
 qemu_int.log
 qemu.log
+disk.img
+kernel.lst
+qemu-monitor.sock

@@ -6,6 +6,7 @@ export TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export KERNEL_BIN="${TESTS_DIR}/../kernel.bin"
 export MONITOR_SOCK="${TESTS_DIR}/qemu-monitor.sock"
 export QEMU_PID=""
+export DISK_IMG="${TESTS_DIR}/ext2-disk.img"
 
 PASS="PASS"
 FAIL="FAIL"
@@ -33,6 +34,25 @@ check_deps() {
 
 qemu_start() {
 	qemu-system-i386 -kernel "$KERNEL_BIN" \
+		-display none \
+		-monitor "unix:${MONITOR_SOCK},server,nowait" \
+		-no-reboot \
+		&
+	QEMU_PID=$!
+	local waited=0
+	while [ ! -S "$MONITOR_SOCK" ] && [ $waited -lt 10 ]; do
+		sleep 0.5
+		waited=$((waited + 1))
+	done
+	if [ ! -S "$MONITOR_SOCK" ]; then
+		echo "ERROR: QEMU monitor socket not created after 5s" >&2
+		return 1
+	fi
+}
+
+qemu_start_with_disk() {
+	qemu-system-i386 -kernel "$KERNEL_BIN" \
+		-drive "file=${DISK_IMG},format=raw,if=ide" \
 		-display none \
 		-monitor "unix:${MONITOR_SOCK},server,nowait" \
 		-no-reboot \

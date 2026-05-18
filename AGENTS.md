@@ -2,7 +2,7 @@
 
 ## Build System
 
-- **Compiler**: `gcc -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector`
+- **Compiler**: `gcc -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector -mno-sse`
 - **Assembler**: `as --32`
 - **Linker**: `ld -melf_i386 -T arch/i386/kernel.ld`
 - **Output**: `kernel.bin` (Multiboot flat binary, loaded at 1MB)
@@ -13,13 +13,14 @@
 
 | Target | Action |
 |--------|--------|
-| `make` | Build `kernel.bin` |
+| `make kernel.bin` | Build `kernel.bin` (default target `make` only builds `hello.elf`) |
 | `make test` | Runs all QEMU integration tests |
-| `make run` | `qemu-system-i386 -kernel kernel.bin -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait` |
+| `make run` | `qemu-system-i386 -kernel kernel.bin -drive file=disk.img,format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait` |
 | `make run-debug` | Same + `-S -s` (pause, wait for GDB on :1234) |
 | `make debug` | Generate `kernel.lst` disassembly |
 | `make gdb` | `gdb -ix gdb_script.gdb` (connects to :1234) |
-| `make clean` | Remove all `.o`, `.bin`, `.lst`, `serial.log`, `qemu-monitor.sock` |
+| `make disk` | Create 32MB ext2 rev-0 disk image (`disk.img`) |
+| `make clean` | Remove all `.o`, `.bin`, `.lst`, `serial.log`, `qemu-monitor.sock`, `disk.img` |
 | `make quit` | Send `quit` to QEMU monitor via socat |
 
 ### Adding new files
@@ -40,14 +41,26 @@ _start (arch/i386/kernel_head.S)
      2. pic_init()             -- 8259 PIC, remap IRQs to 0x20-0x2F
      3. load_idt()             -- 255-entry IDT, DPL=3 for 0x31 (yield) & 0x80 (syscall)
      4. vfs_init()             -- iterate .driver_init, init VGA + PS/2
-     5. welcome()              -- printf("Illuminatrix Kernel!\n")
-     6. init_mm(mmap, len)     -- identity paging 16MB, frame bitmap from multiboot map
-     7. gdt_init()             -- GDT: ring 0/3 code+data + TSS
-     8. scheduler_init()       -- PIT at 100Hz, callback = scheduler_tick
-     9. setup_main_task(...)   -- create shell task (user context)
-    10. pic_enable_irq(0)      -- timer
-    11. pic_enable_irq(1)      -- keyboard
-    12. while(1) hlt
+     5. vfs_inode_init()       -- init VFS inode pool
+     6. tmpfs_init()           -- bootstrap tmpfs root inode, create /dev + /mnt dirs
+     7. vfs_create_device_nodes() + hello_driver_init()
+                               -- populate bootstrap /dev (needed for early printf)
+     8. welcome()              -- printf("Illuminatrix Kernel!\n")
+     9. init_mm(mmap, len)     -- identity paging 16MB, frame bitmap from multiboot map
+    10. gdt_init()             -- GDT: ring 0/3 code+data + TSS
+    11. ata_init()             -- ATA PIO detection (registers block devices)
+    12. ext2_mount(block_dev)  -- mount ext2 from detected block device
+    13. vfs_mount_create(vfs_root_inode(), ext2_root)
+                               -- mount ext2 at /
+    14. vfs_resolve_path("/dev") -> tmpfs_create_mount() -> vfs_mount_create()
+                               -- mount tmpfs at /dev
+    15. vfs_create_device_nodes() + hello_driver_init() (2nd call)
+                               -- populate final tmpfs /dev
+    16. scheduler_init()       -- PIT at 100Hz, callback = scheduler_tick
+    17. setup_main_task(...)   -- create shell task (user context), fds via /dev/kbd/vga/vgaerr
+    18. pic_enable_irq(0)      -- timer
+    19. pic_enable_irq(1)      -- keyboard
+    20. while(1) hlt
 ```
 
 ## Kernel Architecture
@@ -123,18 +136,47 @@ struct file { const struct vfs_ops *ops; void *private_data; };
 ```
 
 - Driver registration: `VFS_DRIVER_INIT(fn)` macro places fn pointer in `.driver_init` linker section
-- `vfs_init()` iterates `__driver_init_start` to `__driver_init_end`, calling each
+- `vfs_init()` iterates `__driver_start` to `__driver_end`, calling each
 - Drivers set global `vfs_stdin`/`vfs_stdout`/`vfs_stderr` during init
 - Accessor functions: `vfs_get_stdin()`, `vfs_get_stdout()`, `vfs_get_stderr()`
 - Each task has `fd_table[16]` — copied on fork; default: 0=stdin, 1=stdout, 2=stderr
+- VFS mount layer: flat array `mounts[VFS_MAX_MOUNTS=8]`. Mounted as: ext2 at root `/`, tmpfs at `/dev`
+- `vfs_inode` struct (in `kernel/vfs.h`): `{ i_no, i_size, i_type, ops, private_data }`
+- Inode pool: static array of 256 inodes (`VFS_MAX_INODES`)
+- File operations go through `vfs_open_file(inode)` which wraps an inode as a `struct file`
+- **Mount resolution**: `vfs_resolve_mount()` compares by `i_no` AND `ops` pointer (not by VFS inode pointer), because filesystem lookups like `ext2_lookup()` allocate **new VFS inode objects** for the same underlying resource each time. `ext2_lookup()` sets `child->i_no = found_inode` (the on-disk ext2 inode number) to enable stable identification.
+
+### Block Device Layer
+
+- `kernel/block.h` + `kernel/block.c` — flat device table (`BLOCK_MAX_DEVICES=4`)
+- `struct block_device`: `{ name[4], block_size, num_blocks, ops*, private_data* }`
+- `struct block_device_ops`: `{ read_sector, write_sector }`
+- `block_register_device()`, `block_find_device(name)`, `block_read()/block_write()` (multi-sector)
+
+### ATA PIO Driver
+
+- `drivers/ata/ata.h` + `drivers/ata/ata.c` — primary (0x1F0) + secondary (0x170) channels
+- Detection: issue `IDENTIFY` (0xEC), poll BSY→DRQ with timeouts and `io_delay()`
+- Registers detected drives as `hda`, `hdb`, etc. via `block_register_device()`
+- 28-bit LBA, PIO polling (no IRQ), single-sector reads/writes
+
+### ext2 Filesystem (Read-Only)
+
+- `kernel/ext2.h` + `kernel/ext2.c` — on-disk structs (`ext2_sb`, `ext2_bgdesc`, `ext2_inode`, `ext2_dirent`)
+- Parses superblock, block group descriptors, inodes, directory entries, indirect blocks (single/double/triple)
+- `ext2_mount(block_dev)` → root `vfs_inode*` — mounted at `/` in `kernel_main()`
+- Single 4KB block buffer (`ext2_buf`) — not reentrant, single-threaded only
+- Data pool of 64 entries for per-inode private data (`ext2_data_pool`)
+- Disk format: ext2 revision 0, 1KB block size, 128-byte inodes
 
 ### Port I/O
 
 | Function | Width | Used For |
 |----------|-------|----------|
-| `in(port)` | 8-bit read | PIC status, PS/2 data |
-| `out(port, val)` | 8-bit write | PIC commands, PS/2 commands, VGA CRTC |
-| `outw(port, val)` | 16-bit write | QEMU/Bochs ACPI shutdown |
+| `in(port)` | 8-bit read | PIC status, PS/2 data, ATA status |
+| `inw(port)` | 16-bit read | ATA data port (PIO data transfer) |
+| `out(port, val)` | 8-bit write | PIC commands, PS/2 commands, VGA CRTC, ATA registers |
+| `outw(port, val)` | 16-bit write | QEMU/Bochs ACPI shutdown, ATA data port |
 | `outl(port, val)` | 32-bit write | VirtualBox ACPI shutdown |
 
 ## Coding Conventions
@@ -150,9 +192,10 @@ struct file { const struct vfs_ops *ops; void *private_data; };
 
 ```
 arch/i386/           -- Boot, GDT/IDT, paging, task context, PIT, port I/O, kernel.ld
-kernel/              -- Main, syscalls, scheduler, task, VFS, PIC, IRQ, mm.h, interrupt.h, pio.h
+kernel/              -- Main, syscalls, scheduler, task, VFS, PIC, IRQ, block, ext2, mm.h, interrupt.h, pio.h
 drivers/vga/         -- VGA text-mode framebuffer
 drivers/ps2/         -- PS/2 keyboard
+drivers/ata/         -- ATA PIO driver (block device)
 shell/               -- Interactive shell (kernel task, ring 3)
 libc/                -- Minimal freestanding libc (printf, string, unistd wrappers via int $0x80)
 tests/               -- QEMU integration tests
@@ -167,8 +210,13 @@ tests/               -- QEMU integration tests
 - **fork_return trampoline**: `task_fork()` pushes `fork_return` as the context_restore return address on the child's stack. `fork_return` does `mov $0, %eax; iretl`, so the child sees eax=0 without actually executing `sys_fork`.
 - **Syscall fallback for early boot**: `sys_write`/`sys_read` use global VFS files when no current task exists.
 - **vsprintf null terminator not counted**: `str[written] = '\0'`, not `str[written++]`, to avoid extra NUL in output.
+- **Mount resolution compares i_no + ops, not pointers**: `vfs_resolve_mount()` matches by `i_no` and `ops` because `ext2_lookup()` allocates a new `vfs_inode` each time. The stored mount_point inode has a different pointer than the newly-looked-up inode, even for the same underlying ext2 directory. This means a mount at `/dev` resolves correctly even on repeated lookups.
+- **ext2_lookup sets child->i_no to the on-disk inode number**: This is required for mount resolution to work. Without this, the VFS-level `i_no` would be a sequential pool counter, making cross-lookup identification impossible.
 - **`-fno-stack-protector` in root CFLAGS**: Stack buffers in kernel code (e.g. shell buf[64]) trigger __stack_chk_fail without this flag.
+- **`-mno-sse` in root CFLAGS**: GCC at `-O0` may generate SSE instructions (`movdqu`/`movaps`) for struct copies, causing #UD since CR4.OSFXSR is not set. Must use `-mno-sse`.
+- **`make kernel.bin` not `make`**: Default target is `examples/hello.elf`. Use `make kernel.bin` to build the kernel.
 - **mm_map_at invlpg**: If mapping in the current page directory (`cr3 == pdir`), `mm_map_at` must `invlpg` the VA or the old mapping may be cached in the TLB.
+- **ATA polling in QEMU TCG**: Tight polling loops on PIO status registers may hang because QEMU TCG virtual time doesn't advance for the device model. Always include `io_delay()` (volatile delay loop) between polling iterations.
 - **vsprintf only handles %c, %s, %d**: No support for hex, unsigned, width, or precision.
 - **No heap allocator**: Only `mm_frame_alloc()` (4KB pages). No malloc/kmalloc/brk.
 
@@ -189,12 +237,11 @@ make -C tests test-shell
 make -C tests test-usermode
 make -C tests test-mmap
 make -C tests test-multiboot
+make -C tests test-tmpfs
+make -C tests test-ext2
 
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock
-
-# Serial output
-tail -f serial.log
 
 # Interrupt log
 qemu-system-i386 -d int -D qemu.log -kernel kernel.bin

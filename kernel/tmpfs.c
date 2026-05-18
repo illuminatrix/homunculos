@@ -16,6 +16,8 @@ struct tmpfs_dir {
 /* Static directory storage */
 static struct tmpfs_dir tmpfs_root_data;
 static struct tmpfs_dir tmpfs_dev_data;
+static struct tmpfs_dir tmpfs_mnt_data;
+static struct tmpfs_dir tmpfs_devmount_root;
 
 /* --- Directory inode ops --- */
 
@@ -79,6 +81,7 @@ void tmpfs_init(void)
 
 	root_dir->count = 0;
 	dev_dir->count = 0;
+	tmpfs_mnt_data.count = 0;
 
 	/* Allocate root directory inode */
 	struct vfs_inode *root_inode = vfs_alloc_inode();
@@ -99,5 +102,27 @@ void tmpfs_init(void)
 	/* Add "dev" entry to root */
 	tmpfs_add_entry(root_inode, "dev", dev_inode);
 
+	/* Allocate /mnt directory inode */
+	struct vfs_inode *mnt_inode = vfs_alloc_inode();
+	if (mnt_inode) {
+		mnt_inode->i_type = VFS_IDIR;
+		mnt_inode->ops = &tmpfs_dir_ops;
+		mnt_inode->private_data = &tmpfs_mnt_data;
+		tmpfs_add_entry(root_inode, "mnt", mnt_inode);
+	}
+
 	vfs_set_root_inode(root_inode);
+}
+
+struct vfs_inode *tmpfs_create_mount(void)
+{
+	struct vfs_inode *inode = vfs_alloc_inode();
+	if (!inode)
+		return 0;
+
+	tmpfs_devmount_root.count = 0;
+	inode->i_type = VFS_IDIR;
+	inode->ops = &tmpfs_dir_ops;
+	inode->private_data = &tmpfs_devmount_root;
+	return inode;
 }

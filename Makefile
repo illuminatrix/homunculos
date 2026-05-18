@@ -6,14 +6,15 @@ LD := ld
 ARCH := i386
 OBJDUMP := /usr/bin/objdump
 OBJCOPY := objcopy
-CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector -Ilibc/include -Ikernel -Ishell
+CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector -mno-sse -Ilibc/include -Ikernel -Ishell
 ASFLAGS := -32
 include arch/Makefile.mk
 include kernel/Makefile.mk
 include shell/Makefile.mk
 include drivers/Makefile.mk
 include examples/Makefile.mk
-QEMU_CMD := qemu-system-i386 -kernel kernel.bin -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait
+DISK_IMG := disk.img
+QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait
 
 
 %.o: %.S
@@ -32,7 +33,7 @@ kernel.bin: $(OBJS)
 debug: kernel.bin
 	$(OBJDUMP) -lSdx kernel.bin > kernel.lst
 
-run: kernel.bin
+run: kernel.bin $(DISK_IMG)
 	$(QEMU_CMD)
 
 run-debug: kernel.bin
@@ -49,8 +50,17 @@ test: kernel.bin
 quit:
 	echo quit | socat - UNIX-CONNECT:qemu-monitor.sock 2>/dev/null || echo "VM not running"
 
+DISK_SIZE_MB ?= 32
+
+$(DISK_IMG):
+	dd if=/dev/zero of=$@ bs=1M count=$(DISK_SIZE_MB) 2>/dev/null
+	mkfs.ext2 -F -E revision=0 -b 1024 $@ 2>/dev/null
+	debugfs -w $@ -R "mkdir /dev" 2>/dev/null
+
+disk: $(DISK_IMG)
+
 .PHONY: clean
 clean:
 	cd libc && make clean
 	find drivers -name '*.o' -delete
-	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o *.bin *.lst serial.log qemu-monitor.sock
+	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o *.bin *.lst serial.log qemu-monitor.sock $(DISK_IMG)

@@ -1,5 +1,6 @@
 #include "vfs.h"
 #include <string.h>
+#include <stdio.h>
 
 /* Linker symbols for .driver_init section */
 extern vfs_driver_init_fn __driver_init_start[];
@@ -74,6 +75,54 @@ struct vfs_inode *vfs_root_inode(void)
 	return vfs_root;
 }
 
+/* === Mount Abstraction === */
+
+static struct vfs_mount vfs_mounts[VFS_MAX_MOUNTS];
+static int vfs_mount_count;
+
+struct vfs_mount *vfs_mount_create(struct vfs_inode *mount_point,
+				   struct vfs_inode *fs_root)
+{
+	if (vfs_mount_count >= VFS_MAX_MOUNTS || !mount_point || !fs_root)
+		return 0;
+	vfs_mounts[vfs_mount_count].mount_point = mount_point;
+	vfs_mounts[vfs_mount_count].root = fs_root;
+	vfs_mount_count++;
+	return &vfs_mounts[vfs_mount_count - 1];
+}
+
+void vfs_mount_destroy(struct vfs_mount *mnt)
+{
+	int i;
+	if (!mnt)
+		return;
+	for (i = 0; i < vfs_mount_count; i++) {
+		if (&vfs_mounts[i] == mnt) {
+			vfs_mounts[i] = vfs_mounts[vfs_mount_count - 1];
+			vfs_mount_count--;
+			return;
+		}
+	}
+}
+
+struct vfs_inode *vfs_resolve_mount(struct vfs_inode *inode)
+{
+	int i;
+	if (!inode)
+		return 0;
+	for (i = 0; i < vfs_mount_count; i++) {
+		struct vfs_inode *mp = vfs_mounts[i].mount_point;
+		/* Compare by inode number and ops table (filesystem type)
+		 * instead of pointer, since filesystem lookups allocate new
+		 * VFS inode objects for the same underlying resource */
+		if (mp && mp->i_no == inode->i_no && mp->ops == inode->ops)
+			return vfs_mounts[i].root;
+	}
+	return inode;
+}
+
+/* --------------------------------------------------------------- */
+
 struct vfs_inode *vfs_resolve_path(const char *path)
 {
 	struct vfs_inode *current = vfs_root_inode();
@@ -86,7 +135,7 @@ struct vfs_inode *vfs_resolve_path(const char *path)
 	if (*path == '/')
 		path++;
 	if (*path == '\0')
-		return current;
+		return vfs_resolve_mount(current);
 
 	while (*path) {
 		i = 0;
@@ -94,6 +143,9 @@ struct vfs_inode *vfs_resolve_path(const char *path)
 			buf[i++] = *path++;
 		}
 		buf[i] = '\0';
+
+		/* Before looking up, resolve mount if current is a mount point */
+		current = vfs_resolve_mount(current);
 
 		if (!current->ops || !current->ops->lookup)
 			return 0;
@@ -105,7 +157,8 @@ struct vfs_inode *vfs_resolve_path(const char *path)
 			path++;
 	}
 
-	return current;
+	/* Resolve mount at the final inode too */
+	return vfs_resolve_mount(current);
 }
 
 int vfs_register_by_path(const char *path, struct vfs_inode *inode)

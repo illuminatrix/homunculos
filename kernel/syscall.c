@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 #include "task.h"
 #include "scheduler.h"
 #include "vfs.h"
