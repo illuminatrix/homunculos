@@ -1,32 +1,97 @@
-Iluminatrix kernel
-==================
+Illuminatrix
+============
 
-# Getting started
+A minimal i386 (32-bit) kernel with ext2 filesystem, tmpfs, ATA PIO, PS/2
+keyboard, VGA text-mode display, multitasking, ELF execution, and an
+interactive shell — all running on bare metal in QEMU.
+
+Building
+--------
 
 ```
-make 
-make run
+make kernel.bin
 ```
 
-## Machine introspection
-- Qemu is started with vga diplay using curses.
-- To manage the VM Qemu is also started with monitor using stdin use `ctr-a + c`
-  - It will show a Qemu prompt
-  - Useful commands
-      ```
-      # get memory info
-      mem info
-      # Print a memory address (e.g 00)
-      x 00
-      # Stop VM
-      quit
-      ```
-## Debug 
+Running
+-------
 
-You can debug qemu the kernel using qemu and gdb
 ```
-# Start qemu with debug
-make run-debug
-# In other terminal debug with qemu
-make 
+make disk    # create a 32MB ext2 disk image (disk.img)
+make run     # launch QEMU with curses display
+```
+
+Building the disk image is automatic — `make run` depends on it.
+
+Commands
+--------
+
+Once the shell prompt (`>`) appears, you can type:
+
+| Command | Description |
+|---------|-------------|
+| `ls [path]` | List directory contents |
+| `cat <file>` | Print file contents to screen |
+| `greeting` | Print "hello" (tests syscall read/write from ring 3) |
+| `echo <text>` | Echo typed characters back (tests per-char I/O loop) |
+| `run` | Fork and exec an ELF binary (`hello.elf`), child prints "Hello, World!", parent prints "child N done" |
+| `poweroff` | Shut down the VM |
+
+Filesystem layout
+-----------------
+
+```
+/           -- ext2 (read-only, from disk.img)
+/dev        -- tmpfs (writable, populated at boot)
+/dev/vga    -- VGA text-mode output
+/dev/kbd    -- PS/2 keyboard input
+/dev/vgaerr -- VGA stderr
+/dev/hello  -- tmpfs demo file ("hello fs")
+```
+
+Disk image
+----------
+
+The disk image is a 32MB ext2 revision 0 filesystem. You can populate it
+with `debugfs`:
+
+```
+debugfs -w disk.img -R "mkdir mydir"
+debugfs -w disk.img -R "write myfile.txt /mydir/myfile.txt"
+```
+
+Debugging
+---------
+
+```
+make run-debug  # launch QEMU paused, waiting for GDB on :1234
+make debug      # generate kernel.lst (disassembly listing)
+make gdb        # connect GDB
+make quit       # stop QEMU
+```
+
+Testing
+-------
+
+```
+make test       # run all 9 integration tests
+```
+
+Or run a single test:
+
+```
+make -C tests test-boot
+make -C tests test-vga
+make -C tests test-shell
+make -C tests test-usermode
+make -C tests test-mmap
+make -C tests test-multiboot
+make -C tests test-tmpfs
+make -C tests test-ext2
+```
+
+Clean
+-----
+
+```
+make clean      # remove all build artifacts
 ```
