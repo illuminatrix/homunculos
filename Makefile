@@ -54,8 +54,15 @@ DISK_SIZE_MB ?= 32
 
 $(DISK_IMG):
 	dd if=/dev/zero of=$@ bs=1M count=$(DISK_SIZE_MB) 2>/dev/null
-	mkfs.ext2 -F -E revision=0 -b 1024 $@ 2>/dev/null
-	debugfs -w $@ -R "mkdir /dev" 2>/dev/null
+	# Create ext2 partition image with /dev directory
+	dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
+	mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
+	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
+	# Create MBR partition table on disk image
+	printf '2048,,L,*\n' | sfdisk $@ 2>/dev/null
+	# Write ext2 partition at sector 2048 (1MB offset)
+	dd if=.part.img of=$@ bs=512 seek=2048 conv=notrunc 2>/dev/null
+	rm -f .part.img
 
 disk: $(DISK_IMG)
 

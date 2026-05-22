@@ -229,11 +229,11 @@ static int dev_inode_read(struct vfs_inode *inode, uint32_t offset,
 {
 	struct vfs_device *dev = (struct vfs_device *)inode->private_data;
 	struct file f;
-	(void)offset;
 	if (!dev->ops->read)
 		return -1;
 	f.ops = dev->ops;
 	f.private_data = dev->private_data;
+	f.pos = offset;
 	return dev->ops->read(&f, buf, size);
 }
 
@@ -242,11 +242,11 @@ static int dev_inode_write(struct vfs_inode *inode, uint32_t offset,
 {
 	struct vfs_device *dev = (struct vfs_device *)inode->private_data;
 	struct file f;
-	(void)offset;
 	if (!dev->ops->write)
 		return -1;
 	f.ops = dev->ops;
 	f.private_data = dev->private_data;
+	f.pos = offset;
 	return dev->ops->write(&f, buf, size);
 }
 
@@ -297,6 +297,7 @@ struct file *vfs_open_file(struct vfs_inode *inode)
 		if (vfs_open_files[i].ops == 0) {
 			vfs_open_files[i].ops = &vfs_file_ops;
 			vfs_open_files[i].private_data = inode;
+			vfs_open_files[i].pos = 0;
 			return &vfs_open_files[i];
 		}
 	}
@@ -309,11 +310,13 @@ void vfs_close_file(struct file *f)
 		return;
 	f->ops = 0;
 	f->private_data = 0;
+	f->pos = 0;
 }
 
 static int vfs_file_read(struct file *f, void *buf, size_t nbyte)
 {
 	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
+	int ret;
 	if (!inode || !inode->ops)
 		return -1;
 
@@ -338,13 +341,20 @@ static int vfs_file_read(struct file *f, void *buf, size_t nbyte)
 
 	if (!inode->ops->read)
 		return -1;
-	return inode->ops->read(inode, 0, buf, nbyte);
+	ret = inode->ops->read(inode, f->pos, buf, nbyte);
+	if (ret > 0)
+		f->pos += ret;
+	return ret;
 }
 
 static int vfs_file_write(struct file *f, const void *buf, size_t nbyte)
 {
 	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
+	int ret;
 	if (!inode || !inode->ops || !inode->ops->write)
 		return -1;
-	return inode->ops->write(inode, 0, buf, nbyte);
+	ret = inode->ops->write(inode, f->pos, buf, nbyte);
+	if (ret > 0)
+		f->pos += ret;
+	return ret;
 }

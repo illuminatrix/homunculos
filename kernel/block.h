@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #define BLOCK_SECTOR_SIZE 512
-#define BLOCK_MAX_DEVICES 4
+#define BLOCK_MAX_DEVICES 20
 #define BLOCK_NAME_LEN    16
 
 struct block_device;

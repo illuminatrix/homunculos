@@ -14,27 +14,35 @@ echo "  Subtest 6: 'poweroff' shuts down QEMU (regression)"
 
 errors=0
 
-# --- Create test ext2 disk image ---
+# --- Create partitioned ext2 disk image ---
 DISK_SIZE=32
+PART_START=2048
 rm -f "$DISK_IMG"
-dd if=/dev/zero of="$DISK_IMG" bs=1M count=$DISK_SIZE 2>/dev/null
-mkfs.ext2 -F -E revision=0 -b 1024 "$DISK_IMG" 2>/dev/null
 
-# Create /dev directory as mount point for tmpfs
-debugfs -w "$DISK_IMG" -R "mkdir /dev" 2>/dev/null
+# Create raw ext2 partition image with /dev and test files
+dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
+mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
+
+debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
 
 # Create a temp file with known content
 TEST_CONTENT=$(mktemp)
 printf "Hello from ext2!" > "$TEST_CONTENT"
 
-# Populate disk with test files via debugfs
-debugfs -w "$DISK_IMG" -R "mkdir /testdir" 2>/dev/null
-debugfs -w "$DISK_IMG" -R "write $TEST_CONTENT /hello.txt" 2>/dev/null
-debugfs -w "$DISK_IMG" -R "mkdir /nested" 2>/dev/null
-debugfs -w "$DISK_IMG" -R "mkdir /nested/deep" 2>/dev/null
+# Populate partition with test files via debugfs
+debugfs -w .part.img -R "mkdir /testdir" 2>/dev/null
+debugfs -w .part.img -R "write $TEST_CONTENT /hello.txt" 2>/dev/null
+debugfs -w .part.img -R "mkdir /nested" 2>/dev/null
+debugfs -w .part.img -R "mkdir /nested/deep" 2>/dev/null
 printf "deep file" > "${TEST_CONTENT}2"
-debugfs -w "$DISK_IMG" -R "write ${TEST_CONTENT}2 /nested/deep/secret.txt" 2>/dev/null
+debugfs -w .part.img -R "write ${TEST_CONTENT}2 /nested/deep/secret.txt" 2>/dev/null
 rm -f "$TEST_CONTENT" "${TEST_CONTENT}2"
+
+# Create MBR-partitioned disk image
+dd if=/dev/zero of="$DISK_IMG" bs=1M count=$DISK_SIZE 2>/dev/null
+printf '2048,,L,*\n' | sfdisk "$DISK_IMG" 2>/dev/null
+dd if=.part.img of="$DISK_IMG" bs=512 seek=$PART_START conv=notrunc 2>/dev/null
+rm -f .part.img
 
 # --- Start QEMU with disk ---
 qemu_start_with_disk || { fail "QEMU failed to start"; exit 1; }

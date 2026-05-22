@@ -11,6 +11,7 @@
 #include "tmpfs.h"
 #include "block.h"
 #include "ext2.h"
+#include "part.h"
 #include "drivers/hello/hello.h"
 #include "drivers/ata/ata.h"
 #include "shell.h"
@@ -62,14 +63,24 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 
 	gdt_init();
 
-	/* Init block device drivers (ATA) and mount ext2 at root */
+	/* Init block device drivers (ATA), parse partitions, mount ext2 */
 	printf("ata: probing...\n");
 	ata_init();
 	printf("ata: done\n");
+
+	/* Parse MBR partitions and register block device VFS devices */
+	part_init();
+
+	/* Mount ext2 from first partition (hda1), fall back to raw disk */
 	{
-		struct block_device *ata_dev = block_find_device("hda");
+		struct block_device *ata_dev = block_find_device("hda1");
+		const char *dev_name = "hda1";
+		if (!ata_dev) {
+			ata_dev = block_find_device("hda");
+			dev_name = "hda";
+		}
 		if (ata_dev) {
-			printf("ext2: mounting hda...\n");
+			printf("ext2: mounting %s...\n", dev_name);
 			struct vfs_inode *ext2_root = ext2_mount(ata_dev);
 			if (ext2_root) {
 				/* Mount ext2 at root / (shadows tmpfs root) */

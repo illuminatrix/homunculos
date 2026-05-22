@@ -19,6 +19,7 @@ struct vfs_ops {
 struct file {
 	const struct vfs_ops *ops;
 	void *private_data;
+	uint32_t pos;
 };
 
 /* Driver init via linker section */
