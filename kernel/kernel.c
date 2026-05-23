@@ -26,9 +26,11 @@ void welcome()
 }
 
 /* Parse "key=value" from a kernel command line string.
-   Returns pointer to the value part (after '='), or 0 if not found. */
-static const char *
-cmdline_find_param(const char *cmdline, const char *key)
+   Copies the value into buf (up to buf_size bytes) and returns 1 on success.
+   Returns 0 if key is not found. */
+static int
+cmdline_find_param(const char *cmdline, const char *key,
+		   char *buf, int buf_size)
 {
 	while (cmdline && *cmdline) {
 		while (*cmdline == ' ')
@@ -44,7 +46,14 @@ cmdline_find_param(const char *cmdline, const char *key)
 		}
 		if (*k == '\0' && *c == '=') {
 			c++;
-			return c;
+			/* Copy value until next space or end */
+			int i = 0;
+			while (*c && *c != ' ' && i < buf_size - 1) {
+				buf[i++] = *c;
+				c++;
+			}
+			buf[i] = '\0';
+			return 1;
 		}
 
 		while (*cmdline && *cmdline != ' ')
@@ -54,7 +63,8 @@ cmdline_find_param(const char *cmdline, const char *key)
 }
 
 static int
-load_elf_from_vfs(const char *path, uint32_t **pdir_out, uint32_t *entry_out)
+load_elf_from_vfs(const char *path, const char *name,
+		  uint32_t **pdir_out, uint32_t *entry_out)
 {
 	struct vfs_inode *ino = vfs_resolve_path(path);
 	uint32_t file_size;
@@ -65,11 +75,11 @@ load_elf_from_vfs(const char *path, uint32_t **pdir_out, uint32_t *entry_out)
 	uint32_t old_cr3;
 
 	if (!ino) {
-		printf("shell: vfs_resolve_path failed\n");
+		printf("%s: vfs_resolve_path failed\n", name);
 		return -1;
 	}
 	if (ino->i_type != VFS_IFILE) {
-		printf("shell: /bin/shell is type %d, not file\n", ino->i_type);
+		printf("%s: %s is type %d, not file\n", name, path, ino->i_type);
 		return -1;
 	}
 
@@ -88,9 +98,9 @@ load_elf_from_vfs(const char *path, uint32_t **pdir_out, uint32_t *entry_out)
 	if (ino->ops->read(ino, 0, elf_buf, file_size) < 0)
 		return -1;
 
-	printf("shell: read %d bytes\n", (int)file_size);
+	printf("%s: read %d bytes\n", name, (int)file_size);
 	if (elf_validate((const struct elf32_ehdr *)elf_buf) < 0) {
-		printf("shell: invalid ELF\n");
+		printf("%s: invalid ELF\n", name);
 		return -1;
 	}
 
@@ -103,9 +113,9 @@ load_elf_from_vfs(const char *path, uint32_t **pdir_out, uint32_t *entry_out)
 	for (i = 0; i < 4; i++)
 		new_pdir[i] = kernel_pdir[i];
 
-	printf("shell: loading ELF segments...\n");
+	printf("%s: loading ELF segments...\n", name);
 	if (elf_load((const struct elf32_ehdr *)elf_buf, new_pdir, entry_out) < 0) {
-		printf("shell: elf_load failed\n");
+		printf("%s: elf_load failed\n", name);
 		return -1;
 	}
 
@@ -182,33 +192,56 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	part_init();
 
 	/* Parse root= from bootloader command line */
-	const char *root_dev = 0;
+	char root_buf[64];
+	int has_root = 0;
 	if ((mem_info_ptr->flags & (1 << 2)) && mem_info_ptr->cmdline)
-		root_dev = cmdline_find_param(
-			(const char *)mem_info_ptr->cmdline, "root");
-	if (!root_dev)
+		has_root = cmdline_find_param(
+			(const char *)mem_info_ptr->cmdline, "root",
+			root_buf, sizeof(root_buf));
+	if (!has_root)
 		panic("no root= parameter");
-	printf("mount: root=%s\n", root_dev);
+	printf("mount: root=%s\n", root_buf);
 
 	/* Mount root at / via mount syscall */
 	extern int sys_mount(const char *, const char *, const char *);
-	sys_mount(root_dev, "/", "ext2");
+	sys_mount(root_buf, "/", "ext2");
 	sys_mount(0, "/dev", "tmpfs");
 
-	/* Load shell ELF from ext2 */
-	if (load_elf_from_vfs("/bin/shell", &pdir, &entry) < 0) {
-		printf("shell: failed to load /bin/shell\n");
-		while (1)
-			asm volatile("hlt");
+	/* Parse init= from bootloader command line, or try defaults */
+	char init_buf[64];
+	int has_init = 0;
+	if ((mem_info_ptr->flags & (1 << 2)) && mem_info_ptr->cmdline)
+		has_init = cmdline_find_param(
+			(const char *)mem_info_ptr->cmdline, "init",
+			init_buf, sizeof(init_buf));
+
+	if (has_init) {
+		printf("init: %s\n", init_buf);
+		if (load_elf_from_vfs(init_buf, "init", &pdir, &entry) < 0)
+			panic("init not found or invalid");
+	} else {
+		const char *defaults[] = {"/init", "/sbin/init", "/bin/sh"};
+		int found = 0;
+		for (int i = 0; i < 3; i++) {
+			if (load_elf_from_vfs(defaults[i], "init",
+					      &pdir, &entry) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			panic("no init found");
 	}
 
 	scheduler_init();
-	setup_main_task(entry, pdir);
+	struct task *init_task = setup_main_task(entry, pdir);
 
 	pic_enable_irq(0);
 	pic_enable_irq(1);
 
 	while (1) {
+		if (init_task->state == TASK_STATE_EXITED)
+			panic("init process exited");
 		asm volatile("hlt");
 	}
 }
