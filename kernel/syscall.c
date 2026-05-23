@@ -207,38 +207,67 @@ copy_kernel_mappings(uint32_t *new_pdir)
 #define USER_STACK_SIZE 0x1000
 
 int
-sys_exec(const void *elf_buf)
+sys_exec(const char *path)
 {
 	struct task *current = scheduler_get_current();
+	struct vfs_inode *ino;
+	uint32_t file_size, num_pages;
+	uint8_t *elf_buf;
 	const struct elf32_ehdr *ehdr;
 	uint32_t entry;
 	uint32_t *new_pdir;
 	uint32_t va, user_esp, old_cr3;
 	uint32_t stack_va;
 	int cr3_saved = 0;
+	int i;
 
 	if (!current)
 		return -1;
 
+	ino = vfs_resolve_path(path);
+	if (!ino)
+		return -1;
+	if (ino->i_type != VFS_IFILE)
+		return -1;
+
+	file_size = ino->i_size;
+	num_pages = (file_size + 0xFFF) / 0x1000;
+
+	elf_buf = 0;
+	for (i = 0; i < (int)num_pages; i++) {
+		uint8_t *page = (uint8_t *)mm_frame_alloc();
+		if (!page)
+			goto fail;
+		if (i == 0)
+			elf_buf = page;
+	}
+
+	if (ino->ops->read(ino, 0, elf_buf, file_size) < 0)
+		goto fail;
+
 	ehdr = (const struct elf32_ehdr *)elf_buf;
 	if (elf_validate(ehdr) < 0)
-		return -1;
+		goto fail;
 
 	new_pdir = (uint32_t *)mm_frame_alloc();
 	if (!new_pdir)
-		return -1;
+		goto fail;
 	memset(new_pdir, 0, 0x1000);
 
 	copy_kernel_mappings(new_pdir);
 
-	if (elf_load(ehdr, new_pdir, &entry) < 0)
+	if (elf_load(ehdr, new_pdir, &entry) < 0) {
+		mm_frame_free(new_pdir);
 		goto fail;
+	}
 
 	stack_va = USER_STACK_TOP - USER_STACK_SIZE;
 	for (va = stack_va; va < USER_STACK_TOP; va += 0x1000) {
 		if (!mm_alloc_at(new_pdir, va,
-				 MM_PRESENT | MM_RW | MM_USER))
+				 MM_PRESENT | MM_RW | MM_USER)) {
+			mm_frame_free(new_pdir);
 			goto fail;
+		}
 	}
 
 	asm volatile("mov %%cr3, %0" : "=r"(old_cr3));
@@ -247,18 +276,13 @@ sys_exec(const void *elf_buf)
 
 	elf_copy_segments(ehdr);
 
-	/* Set up initial user stack with argc=0 argv=0 */
+	for (i = 0; i < (int)num_pages; i++)
+		mm_frame_free((void *)((uint32_t)elf_buf + i * 0x1000));
+
 	user_esp = USER_STACK_TOP;
 	user_esp -= 4;
 	*(uint32_t *)user_esp = 0;
 
-	/*
-	 * Overwrite the int $0x80 iretl frame on the kernel stack
-	 * so that when sys_exec returns, iretl enters the ELF program.
-	 * Stack layout from ebp:
-	 *   ebp+20 = eip, ebp+24 = cs, ebp+28 = eflags
-	 *   ebp+32 = user esp, ebp+36 = user ss
-	 */
 	uint32_t fp;
 	asm volatile("movl %%ebp, %0" : "=r"(fp));
 	*(uint32_t *)(fp + 20) = entry;
@@ -270,26 +294,20 @@ sys_exec(const void *elf_buf)
 fail:
 	if (cr3_saved)
 		asm volatile("mov %0, %%cr3" :: "r"(old_cr3));
-	mm_frame_free(new_pdir);
+	if (elf_buf) {
+		for (i = 0; i < (int)num_pages; i++)
+			mm_frame_free((void *)((uint32_t)elf_buf
+					       + i * 0x1000));
+	}
 	return -1;
 }
 
 int
-sys_join(void)
+sys_waitpid(int pid, int *status, int options)
 {
-	struct task *current = scheduler_get_current();
-	if (!current)
-		return -1;
-
-	while (1) {
-		struct task *child = task_find_child_exited(current->pid);
-		if (child) {
-			int pid = child->pid;
-			child->parent_pid = -1;
-			return pid;
-		}
-		task_yield();
-	}
+	(void)pid;
+	(void)options;
+	return task_waitpid(pid, status);
 }
 
 static struct block_device *
@@ -371,7 +389,7 @@ syscall_init(void)
 	systemcall_table[SYS_read]        = (uint32_t)sys_read;
 	systemcall_table[SYS_write]       = (uint32_t)sys_write;
 	systemcall_table[SYS_execve]      = (uint32_t)sys_exec;
-	systemcall_table[SYS_waitpid]     = (uint32_t)sys_join;
+	systemcall_table[SYS_waitpid]     = (uint32_t)sys_waitpid;
 	systemcall_table[SYS_open]        = (uint32_t)sys_open;
 	systemcall_table[SYS_close]       = (uint32_t)sys_close;
 	systemcall_table[SYS_mount]       = (uint32_t)sys_mount;

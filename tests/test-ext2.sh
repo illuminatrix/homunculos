@@ -30,6 +30,9 @@ debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
 # Add shell binary
 debugfs -w .part.img -R "write ${TESTS_DIR}/../shell/shell /bin/shell" 2>/dev/null
 
+# Add init binary  
+debugfs -w .part.img -R "write ${TESTS_DIR}/../init/init /bin/init" 2>/dev/null
+
 # Create a temp file with known content
 TEST_CONTENT=$(mktemp)
 printf "Hello from ext2!" > "$TEST_CONTENT"

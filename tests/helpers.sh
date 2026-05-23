@@ -34,8 +34,13 @@ check_deps() {
 
 prepare_basic_disk() {
 	local shell_bin="${TESTS_DIR}/../shell/shell"
+	local init_bin="${TESTS_DIR}/../init/init"
 	if [ ! -f "$shell_bin" ]; then
 		echo "ERROR: shell binary not found at $shell_bin" >&2
+		return 1
+	fi
+	if [ ! -f "$init_bin" ]; then
+		echo "ERROR: init binary not found at $init_bin" >&2
 		return 1
 	fi
 	rm -f "$DISK_IMG"
@@ -45,6 +50,7 @@ prepare_basic_disk() {
 	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
 	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
 	debugfs -w .part.img -R "write $shell_bin /bin/shell" 2>/dev/null
+	debugfs -w .part.img -R "write $init_bin /bin/init" 2>/dev/null
 	dd if=/dev/zero of="$DISK_IMG" bs=1M count=32 2>/dev/null
 	printf '2048,,L,*\n' | sfdisk "$DISK_IMG" 2>/dev/null
 	dd if=.part.img of="$DISK_IMG" bs=512 seek=2048 conv=notrunc 2>/dev/null
@@ -57,7 +63,7 @@ qemu_start() {
 		-display none \
 		-monitor "unix:${MONITOR_SOCK},server,nowait" \
 		-no-reboot \
-		-append "root=/dev/hda1 init=/bin/shell" \
+		-append "root=/dev/hda1 init=/bin/init" \
 		&
 	QEMU_PID=$!
 	local waited=0
@@ -77,7 +83,7 @@ qemu_start_with_disk() {
 		-display none \
 		-monitor "unix:${MONITOR_SOCK},server,nowait" \
 		-no-reboot \
-		-append "root=/dev/hda1 init=/bin/shell" \
+		-append "root=/dev/hda1 init=/bin/init" \
 		&
 	QEMU_PID=$!
 	local waited=0

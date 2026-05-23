@@ -101,31 +101,54 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	memcpy((void *)dest, (void *)(parent_fp + (user_fork ? 40 : 32)), below_size);
 
 	if (user_fork) {
-		/* copy user stack data from parent to child */
 		uint32_t user_esp = *(uint32_t *)(parent_fp + 32);
 		uint32_t user_stack_top = (uint32_t)(parent->stack
 					+ TASK_STACK_SIZE / 2);
-		uint32_t user_size = user_stack_top - user_esp;
-		uint32_t child_user_esp = (uint32_t)child->stack
+
+		/*
+		 * Copy user stack data only if it lives inside the task stack area
+		 * (kernel-created user tasks via task_init_user_context).
+		 * ELF-loaded tasks (loaded via load_elf_from_vfs / sys_exec) have
+		 * their user stack in separately mapped pages at USER_STACK_TOP,
+		 * and the child shares the parent's page directory, so no copy
+		 * is needed (and the internal arithmetic would be wrong for
+		 * external user stacks).
+		 */
+		if (user_esp >= (uint32_t)parent->stack &&
+		    user_esp < user_stack_top) {
+			uint32_t user_size = user_stack_top - user_esp;
+			uint32_t child_user_esp = (uint32_t)child->stack
 					+ (user_esp - (uint32_t)parent->stack);
-		memcpy((void *)child_user_esp, (void *)user_esp, user_size);
+			memcpy((void *)child_user_esp, (void *)user_esp,
+			       user_size);
+		}
 	}
 
 	uint32_t *sp = (uint32_t *)(dest + below_size);
 
 	if (user_fork) {
 		*(--sp) = GDT_USER_DATA;                     /* ss */
-		*(--sp) = (uint32_t)(child->stack
-			   + TASK_STACK_SIZE / 2);          /* user esp (midpoint) */
+		*(--sp) = *(uint32_t *)(parent_fp + 32);     /* user esp */
 	}
 	*(--sp) = eflags;
 	*(--sp) = cs;
 	*(--sp) = eip;
 	*(--sp) = (uint32_t)fork_return;
 
-	/* adjust ebp for child's stack */
-	uint32_t child_ebp = (uint32_t)child->stack
-		+ (parent_ebp_val - (uint32_t)parent->stack);
+	/*
+	 * Adjust ebp for child's stack.
+	 * If parent's ebp points into the kernel stack area, translate
+	 * relative to child's stack.  Otherwise it's a user-space address
+	 * (ELF-loaded task) — keep as-is since child shares the pdir.
+	 */
+	uint32_t child_ebp;
+	if (parent_ebp_val >= (uint32_t)parent->stack &&
+	    parent_ebp_val < (uint32_t)(parent->stack + TASK_STACK_SIZE)) {
+		child_ebp = (uint32_t)child->stack
+			+ (parent_ebp_val - (uint32_t)parent->stack);
+	} else {
+		child_ebp = parent_ebp_val;
+	}
 
 	task_init_fork_context(child, (uint32_t)sp, child_ebp);
 	scheduler_add_task(child);
@@ -138,7 +161,53 @@ void task_exit(void)
 	if (!current)
 		return;
 	current->state = TASK_STATE_EXITED;
+
+	/* Wake parent that may be blocked in waitpid */
+	if (current->parent_pid >= 0)
+		task_wake(current->parent_pid);
+
 	task_yield();
+}
+
+void task_block(void)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return;
+	current->state = TASK_STATE_BLOCKED;
+	task_yield();
+}
+
+void task_wake(int pid)
+{
+	for (int i = 0; i < next_pid; i++) {
+		if (tasks[i].pid == pid
+		    && tasks[i].state == TASK_STATE_BLOCKED) {
+			tasks[i].state = TASK_STATE_READY;
+			return;
+		}
+	}
+}
+
+int task_waitpid(int pid, int *status)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return -1;
+
+	(void)pid;
+
+	while (1) {
+		struct task *child = task_find_child_exited(current->pid);
+		if (child) {
+			int cpid = child->pid;
+			if (status)
+				*status = child->exit_status;
+			child->parent_pid = -1;
+			return cpid;
+		}
+		task_block();
+	}
 }
 
 void task_set_exit_status(int status)

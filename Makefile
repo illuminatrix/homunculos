@@ -11,9 +11,10 @@ ASFLAGS := -32
 include arch/Makefile.mk
 include kernel/Makefile.mk
 include shell/Makefile.mk
+include init/Makefile.mk
 include drivers/Makefile.mk
 DISK_IMG := disk.img
-CMDLINE ?= root=/dev/hda1 init=/bin/shell
+CMDLINE ?= root=/dev/hda1 init=/bin/init
 QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait -append "$(CMDLINE)"
 
 
@@ -44,7 +45,7 @@ gdb:
 
 .PHONY: test clean quit
 
-test: kernel.bin shell/shell
+test: kernel.bin shell/shell $(INIT_ELF)
 	$(MAKE) -C tests test
 
 quit:
@@ -52,7 +53,7 @@ quit:
 
 DISK_SIZE_MB ?= 32
 
-$(DISK_IMG): shell/shell
+$(DISK_IMG): shell/shell $(INIT_ELF)
 	dd if=/dev/zero of=$@ bs=1M count=$(DISK_SIZE_MB) 2>/dev/null
 	# Create ext2 partition image with /dev and /bin directories
 	dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
@@ -61,6 +62,7 @@ $(DISK_IMG): shell/shell
 	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
 	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
 	debugfs -w .part.img -R "write shell/shell /bin/shell" 2>/dev/null
+	debugfs -w .part.img -R "write init/init /bin/init" 2>/dev/null
 	# Create MBR partition table on disk image
 	printf '2048,,L,*\n' | sfdisk $@ 2>/dev/null
 	# Write ext2 partition at sector 2048 (1MB offset)

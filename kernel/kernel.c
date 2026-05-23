@@ -160,6 +160,13 @@ static struct task *setup_main_task(uint32_t entry, uint32_t *pdir)
 	return t;
 }
 
+static void init_waiter(void *arg)
+{
+	(void)arg;
+	task_waitpid(-1, 0);
+	panic("init process exited");
+}
+
 void kernel_main(multiboot_info_t *mem_info_ptr)
 {
 	extern void syscall_init(void);
@@ -236,12 +243,22 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	scheduler_init();
 	struct task *init_task = setup_main_task(entry, pdir);
 
+	/* Create a kernel waiter that blocks until init exits */
+	struct task *waiter = task_alloc();
+	if (!waiter)
+		panic("no task slot for waiter");
+	strncpy(waiter->name, "waiter", 31);
+	waiter->name[31] = '\0';
+	waiter->parent_pid = -1;
+	waiter->pdir = kernel_pdir;
+	init_task->parent_pid = waiter->pid;
+	task_init_context(waiter, init_waiter, 0);
+	scheduler_add_task(waiter);
+
 	pic_enable_irq(0);
 	pic_enable_irq(1);
 
-	while (1) {
-		if (init_task->state == TASK_STATE_EXITED)
-			panic("init process exited");
+	asm volatile("sti");
+	while (1)
 		asm volatile("hlt");
-	}
 }
