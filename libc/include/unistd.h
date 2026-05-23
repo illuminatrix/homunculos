@@ -18,6 +18,8 @@ int mount(const char *, const char *, const char *);
 int unmount(const char *);
 int yield(void);
 int reboot(void);
+int getpid(void);
+int getppid(void);
 void exit(int);
 
 #ifdef __cplusplus

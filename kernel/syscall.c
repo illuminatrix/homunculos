@@ -381,6 +381,24 @@ sys_unmount(const char *target)
 	return vfs_unmount_path(target);
 }
 
+int
+sys_getpid(void)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return -1;
+	return current->pid;
+}
+
+int
+sys_getppid(void)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return -1;
+	return current->parent_pid;
+}
+
 void
 syscall_init(void)
 {
@@ -396,4 +414,6 @@ syscall_init(void)
 	systemcall_table[SYS_umount]      = (uint32_t)sys_unmount;
 	systemcall_table[SYS_sched_yield] = (uint32_t)sys_yield;
 	systemcall_table[SYS_reboot]      = (uint32_t)sys_reboot;
+	systemcall_table[SYS_getpid]      = (uint32_t)sys_getpid;
+	systemcall_table[SYS_getppid]     = (uint32_t)sys_getppid;
 }

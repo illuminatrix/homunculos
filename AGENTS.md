@@ -114,9 +114,11 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 6 | SYS_close | `sys_close` | `int sys_close(int fd)` |
 | 7 | SYS_waitpid | `sys_join` | `int sys_join(void)` |
 | 11 | SYS_execve | `sys_exec` | `int sys_exec(const void *elf_buf)` |
+| 20 | SYS_getpid | `sys_getpid` | `int sys_getpid(void)` |
 | 21 | SYS_mount | `sys_mount` | `int sys_mount(const char *source, const char *target, const char *fstype)` |
 | 22 | SYS_umount | `sys_unmount` | `int sys_unmount(const char *target)` |
 | 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |
+| 64 | SYS_getppid | `sys_getppid` | `int sys_getppid(void)` |
 | 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(void)` |
 
 Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.

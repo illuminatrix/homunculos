@@ -13,6 +13,8 @@
 #define SYS_mount      21
 #define SYS_umount     22
 #define SYS_sched_yield 24
+#define SYS_getpid     20
+#define SYS_getppid    64
 #define SYS_reboot     88
 
 #endif

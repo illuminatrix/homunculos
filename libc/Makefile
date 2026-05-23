@@ -23,6 +23,8 @@ unistd/reboot.o \
 unistd/mount.o \
 unistd/unmount.o \
 unistd/yield.o \
+unistd/getpid.o \
+unistd/getppid.o \
 
 OBJS:=\
 $(FREEOBJS) \

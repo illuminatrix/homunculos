@@ -30,7 +30,7 @@ Build (on Linux host, not in-kernel):
     Add cwd_inode to task struct in kernel/task.h, resolve relative
     paths against it in vfs_resolve_path().  kernel/syscall.c + vfs
 
-[ ] getpid/getppid   -- SYS_getpid (20), SYS_getppid (64)
+[x] getpid/getppid   -- SYS_getpid (20), SYS_getppid (64)
     Trivial: read from scheduler_get_current()->pid / parent_pid.
 
 [ ] lseek   -- SYS_lseek (19)
