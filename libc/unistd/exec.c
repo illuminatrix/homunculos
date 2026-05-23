@@ -5,7 +5,7 @@ int exec(const void *elf)
 	asm volatile(
 		"int $0x80"
 		: "=a"(ret)
-		: "0"(5), "b"(elf)
+		: "0"(11), "b"(elf)
 		: "ecx", "edx", "memory"
 	);
 

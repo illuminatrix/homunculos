@@ -96,14 +96,21 @@ All structs are fully defined in `.h` files (no opaque structs). No dynamic allo
 
 ### Syscalls
 
+Syscall numbers follow Linux i386 conventions.
+Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
+
 | # | Name | Handler | Signature |
 |---|------|---------|-----------|
 | 1 | SYS_exit | `sys_exit` | `int sys_exit(int status)` |
 | 2 | SYS_fork | `sys_fork` | `int sys_fork(void)` |
 | 3 | SYS_read | `sys_read` | `int sys_read(int fd, void *buf, size_t len)` |
 | 4 | SYS_write | `sys_write` | `int sys_write(int fd, const void *buf, size_t len)` |
-| 5 | SYS_exec | `sys_exec` | `int sys_exec(const void *elf_buf)` |
-| 6 | SYS_join | `sys_join` | `int sys_join(void)` |
+| 5 | SYS_open | `sys_open` | `int sys_open(const char *path, int flags)` |
+| 6 | SYS_close | `sys_close` | `int sys_close(int fd)` |
+| 7 | SYS_waitpid | `sys_join` | `int sys_join(void)` |
+| 11 | SYS_execve | `sys_exec` | `int sys_exec(const void *elf_buf)` |
+| 21 | SYS_mount | `sys_mount` | `int sys_mount(const char *source, const char *target, const char *fstype)` |
+| 22 | SYS_umount | `sys_unmount` | `int sys_unmount(const char *target)` |
 | 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |
 | 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(void)` |
 

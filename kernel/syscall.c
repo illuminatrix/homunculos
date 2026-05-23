@@ -370,12 +370,12 @@ syscall_init(void)
 	systemcall_table[SYS_fork]        = (uint32_t)sys_fork;
 	systemcall_table[SYS_read]        = (uint32_t)sys_read;
 	systemcall_table[SYS_write]       = (uint32_t)sys_write;
-	systemcall_table[SYS_exec]        = (uint32_t)sys_exec;
-	systemcall_table[SYS_join]        = (uint32_t)sys_join;
+	systemcall_table[SYS_execve]      = (uint32_t)sys_exec;
+	systemcall_table[SYS_waitpid]     = (uint32_t)sys_join;
 	systemcall_table[SYS_open]        = (uint32_t)sys_open;
 	systemcall_table[SYS_close]       = (uint32_t)sys_close;
 	systemcall_table[SYS_mount]       = (uint32_t)sys_mount;
-	systemcall_table[SYS_unmount]     = (uint32_t)sys_unmount;
+	systemcall_table[SYS_umount]      = (uint32_t)sys_unmount;
 	systemcall_table[SYS_sched_yield] = (uint32_t)sys_yield;
 	systemcall_table[SYS_reboot]      = (uint32_t)sys_reboot;
 }

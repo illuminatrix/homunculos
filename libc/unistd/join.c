@@ -5,7 +5,7 @@ int join(void)
 	asm volatile(
 		"int $0x80"
 		: "=a"(ret)
-		: "0"(6)
+		: "0"(7)
 		: "ebx", "ecx", "edx", "memory"
 	);
 
