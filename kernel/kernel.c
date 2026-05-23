@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include "kernel.h"
 #include "interrupt.h"
 #include "mm.h"
@@ -14,6 +15,24 @@
 #include "drivers/ata/ata.h"
 #include "shell.h"
 #include "gdt.h"
+
+extern const uint8_t _binary_shell_shell_start[];
+
+static void exec_shell(void *arg)
+{
+	(void)arg;
+	int ret;
+	asm volatile(
+		"int $0x80"
+		: "=a"(ret)
+		: "0"(11), "b"(_binary_shell_shell_start)
+		: "ecx", "edx", "memory");
+	/* exec only returns on error — exit the task */
+	if (ret < 0)
+		asm volatile("int $0x80" :: "a"(1), "b"(1) : "memory");
+	while (1)
+		asm volatile("hlt");
+}
 
 void welcome()
 {
@@ -75,7 +94,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	sys_mount(0, "/dev", "tmpfs");
 
 	scheduler_init();
-	setup_main_task(shell_main, 0);
+	setup_main_task(exec_shell, 0);
 
 	pic_enable_irq(0);
 	pic_enable_irq(1);

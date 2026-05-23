@@ -3,7 +3,8 @@ compile_commands.json
 *.o
 .cache
 serial.log
-examples/hello.elf
+shell/shell
+shell/shell_elf.o
 qemu_int.log
 qemu.log
 disk.img

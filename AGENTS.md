@@ -221,7 +221,7 @@ tests/               -- QEMU integration tests
 - **ext2_lookup sets child->i_no to the on-disk inode number**: This is required for mount resolution to work. Without this, the VFS-level `i_no` would be a sequential pool counter, making cross-lookup identification impossible.
 - **`-fno-stack-protector` in root CFLAGS**: Stack buffers in kernel code (e.g. shell buf[64]) trigger __stack_chk_fail without this flag.
 - **`-mno-sse` in root CFLAGS**: GCC at `-O0` may generate SSE instructions (`movdqu`/`movaps`) for struct copies, causing #UD since CR4.OSFXSR is not set. Must use `-mno-sse`.
-- **`make kernel.bin` not `make`**: Default target is `examples/hello.elf`. Use `make kernel.bin` to build the kernel.
+- **`make kernel.bin` not `make`**: Default target is `hello.elf` (legacy). Use `make kernel.bin` to build the kernel.
 - **mm_map_at invlpg**: If mapping in the current page directory (`cr3 == pdir`), `mm_map_at` must `invlpg` the VA or the old mapping may be cached in the TLB.
 - **ATA polling in QEMU TCG**: Tight polling loops on PIO status registers may hang because QEMU TCG virtual time doesn't advance for the device model. Always include `io_delay()` (volatile delay loop) between polling iterations.
 - **vsprintf only handles %c, %s, %d**: No support for hex, unsigned, width, or precision.

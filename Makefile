@@ -12,7 +12,6 @@ include arch/Makefile.mk
 include kernel/Makefile.mk
 include shell/Makefile.mk
 include drivers/Makefile.mk
-include examples/Makefile.mk
 DISK_IMG := disk.img
 QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait
 

@@ -22,6 +22,7 @@ unistd/exit.o \
 unistd/reboot.o \
 unistd/mount.o \
 unistd/unmount.o \
+unistd/yield.o \
 
 OBJS:=\
 $(FREEOBJS) \
