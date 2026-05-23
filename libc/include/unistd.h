@@ -14,6 +14,8 @@ int open(const char *, int);
 int close(int);
 int exec(const void *);
 int join(void);
+int mount(const char *, const char *, const char *);
+int unmount(const char *);
 int reboot(void);
 void exit(int);
 

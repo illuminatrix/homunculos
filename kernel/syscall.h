@@ -9,6 +9,8 @@
 #define SYS_join        6
 #define SYS_open        7
 #define SYS_close       8
+#define SYS_mount       9
+#define SYS_unmount    10
 #define SYS_sched_yield 24
 #define SYS_reboot      88
 

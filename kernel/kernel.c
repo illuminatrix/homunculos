@@ -9,8 +9,6 @@
 #include "task.h"
 #include "vfs.h"
 #include "tmpfs.h"
-#include "block.h"
-#include "ext2.h"
 #include "part.h"
 #include "drivers/hello/hello.h"
 #include "drivers/ata/ata.h"
@@ -71,38 +69,10 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	/* Parse MBR partitions and register block device VFS devices */
 	part_init();
 
-	/* Mount ext2 from first partition (hda1), fall back to raw disk */
-	{
-		struct block_device *ata_dev = block_find_device("hda1");
-		const char *dev_name = "hda1";
-		if (!ata_dev) {
-			ata_dev = block_find_device("hda");
-			dev_name = "hda";
-		}
-		if (ata_dev) {
-			printf("ext2: mounting %s...\n", dev_name);
-			struct vfs_inode *ext2_root = ext2_mount(ata_dev);
-			if (ext2_root) {
-				/* Mount ext2 at root / (shadows tmpfs root) */
-				vfs_mount_create(vfs_root_inode(), ext2_root);
-				printf("ext2: mounted at /\n");
-
-				/* Mount tmpfs at /dev in ext2 */
-				struct vfs_inode *dev_dir = vfs_resolve_path("/dev");
-				if (dev_dir) {
-					struct vfs_inode *dev_tmpfs = tmpfs_create_mount();
-					if (dev_tmpfs)
-						vfs_mount_create(dev_dir, dev_tmpfs);
-				}
-			} else {
-				printf("ext2: mount failed (no ext2?)\n");
-			}
-		}
-	}
-
-	/* Re-create device nodes in new /dev (through tmpfs mount) */
-	vfs_create_device_nodes();
-	hello_driver_init();
+	/* Mount ext2 at root via mount syscall */
+	extern int sys_mount(const char *, const char *, const char *);
+	sys_mount("/dev/hda1", "/", "ext2");
+	sys_mount(0, "/dev", "tmpfs");
 
 	scheduler_init();
 	setup_main_task(shell_main, 0);

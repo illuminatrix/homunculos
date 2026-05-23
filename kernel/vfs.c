@@ -105,6 +105,24 @@ void vfs_mount_destroy(struct vfs_mount *mnt)
 	}
 }
 
+int vfs_unmount_path(const char *path)
+{
+	struct vfs_inode *target = vfs_resolve_path(path);
+	int i;
+
+	if (!target)
+		return -1;
+
+	for (i = 0; i < vfs_mount_count; i++) {
+		if (vfs_mounts[i].root == target) {
+			vfs_mount_destroy(&vfs_mounts[i]);
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
 struct vfs_inode *vfs_resolve_mount(struct vfs_inode *inode)
 {
 	int i;

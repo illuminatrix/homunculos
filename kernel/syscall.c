@@ -10,6 +10,10 @@
 #include "mm.h"
 #include "interrupt.h"
 #include "pio.h"
+#include "block.h"
+#include "ext2.h"
+#include "tmpfs.h"
+#include "drivers/hello/hello.h"
 
 uint32_t systemcall_table[255];
 
@@ -288,6 +292,77 @@ sys_join(void)
 	}
 }
 
+static struct block_device *
+mount_resolve_blockdev(const char *source)
+{
+	const char *name;
+
+	if (!source)
+		return 0;
+
+	/* Extract basename from path (e.g. "/dev/hda1" -> "hda1") */
+	name = source;
+	{
+		const char *p = source;
+		while (*p) {
+			if (*p == '/')
+				name = p + 1;
+			p++;
+		}
+	}
+
+	return block_find_device(name);
+}
+
+int
+sys_mount(const char *source, const char *target, const char *fstype)
+{
+	struct vfs_inode *target_inode;
+	struct vfs_inode *fs_root;
+
+	if (!target || !fstype)
+		return -1;
+
+	target_inode = vfs_resolve_path(target);
+	if (!target_inode)
+		return -1;
+
+	if (strcmp(fstype, "ext2") == 0) {
+		struct block_device *dev = mount_resolve_blockdev(source);
+		if (!dev)
+			return -1;
+		fs_root = ext2_mount(dev);
+		if (!fs_root)
+			return -1;
+		printf("ext2: mounted at %s\n", target);
+	} else if (strcmp(fstype, "tmpfs") == 0) {
+		fs_root = tmpfs_create_mount();
+		if (!fs_root)
+			return -1;
+	} else {
+		return -1;
+	}
+
+	if (!vfs_mount_create(target_inode, fs_root))
+		return -1;
+
+	/* Re-populate device nodes when tmpfs is mounted at /dev */
+	if (strcmp(fstype, "tmpfs") == 0 && strcmp(target, "/dev") == 0) {
+		vfs_create_device_nodes();
+		hello_driver_init();
+	}
+
+	return 0;
+}
+
+int
+sys_unmount(const char *target)
+{
+	if (!target)
+		return -1;
+	return vfs_unmount_path(target);
+}
+
 void
 syscall_init(void)
 {
@@ -299,6 +374,8 @@ syscall_init(void)
 	systemcall_table[SYS_join]        = (uint32_t)sys_join;
 	systemcall_table[SYS_open]        = (uint32_t)sys_open;
 	systemcall_table[SYS_close]       = (uint32_t)sys_close;
+	systemcall_table[SYS_mount]       = (uint32_t)sys_mount;
+	systemcall_table[SYS_unmount]     = (uint32_t)sys_unmount;
 	systemcall_table[SYS_sched_yield] = (uint32_t)sys_yield;
 	systemcall_table[SYS_reboot]      = (uint32_t)sys_reboot;
 }

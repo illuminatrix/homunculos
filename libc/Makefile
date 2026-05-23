@@ -20,6 +20,8 @@ unistd/exec.o \
 unistd/join.o \
 unistd/exit.o \
 unistd/reboot.o \
+unistd/mount.o \
+unistd/unmount.o \
 
 OBJS:=\
 $(FREEOBJS) \

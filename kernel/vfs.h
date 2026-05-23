@@ -100,6 +100,7 @@ struct vfs_mount {
 struct vfs_mount *vfs_mount_create(struct vfs_inode *mount_point,
 				   struct vfs_inode *fs_root);
 void vfs_mount_destroy(struct vfs_mount *mnt);
+int vfs_unmount_path(const char *path);
 struct vfs_inode *vfs_resolve_mount(struct vfs_inode *inode);
 
 #endif
