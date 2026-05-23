@@ -12,6 +12,7 @@
 #include "elf.h"
 #include "tmpfs.h"
 #include "part.h"
+#include "panic.h"
 #include "drivers/hello/hello.h"
 #include "drivers/ata/ata.h"
 #include "gdt.h"
@@ -22,6 +23,34 @@
 void welcome()
 {
 	printf("Illuminatrix Kernel!\n");
+}
+
+/* Parse "key=value" from a kernel command line string.
+   Returns pointer to the value part (after '='), or 0 if not found. */
+static const char *
+cmdline_find_param(const char *cmdline, const char *key)
+{
+	while (cmdline && *cmdline) {
+		while (*cmdline == ' ')
+			cmdline++;
+		if (!*cmdline)
+			break;
+
+		const char *k = key;
+		const char *c = cmdline;
+		while (*k && *c && *k == *c) {
+			k++;
+			c++;
+		}
+		if (*k == '\0' && *c == '=') {
+			c++;
+			return c;
+		}
+
+		while (*cmdline && *cmdline != ' ')
+			cmdline++;
+	}
+	return 0;
 }
 
 static int
@@ -152,9 +181,18 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	/* Parse MBR partitions and register block device VFS devices */
 	part_init();
 
-	/* Mount ext2 at root via mount syscall */
+	/* Parse root= from bootloader command line */
+	const char *root_dev = 0;
+	if ((mem_info_ptr->flags & (1 << 2)) && mem_info_ptr->cmdline)
+		root_dev = cmdline_find_param(
+			(const char *)mem_info_ptr->cmdline, "root");
+	if (!root_dev)
+		panic("no root= parameter");
+	printf("mount: root=%s\n", root_dev);
+
+	/* Mount root at / via mount syscall */
 	extern int sys_mount(const char *, const char *, const char *);
-	sys_mount("/dev/hda1", "/", "ext2");
+	sys_mount(root_dev, "/", "ext2");
 	sys_mount(0, "/dev", "tmpfs");
 
 	/* Load shell ELF from ext2 */

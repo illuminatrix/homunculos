@@ -2,7 +2,7 @@ TESTS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 KERNEL_DIR := $(TESTS_DIR)/..
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 
-TEST_SCRIPTS := test-multiboot test-boot test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2
+TEST_SCRIPTS := test-multiboot test-boot test-panic test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
 
 .PHONY: all test $(TEST_SCRIPTS) clean
@@ -20,6 +20,9 @@ test-multiboot: $(KERNEL_BIN)
 
 test-boot: $(KERNEL_BIN)
 	@$(TESTS_DIR)/test-boot.sh
+
+test-panic: $(KERNEL_BIN)
+	@$(TESTS_DIR)/test-panic.sh
 
 test-vga: $(KERNEL_BIN)
 	@$(TESTS_DIR)/test-vga.sh

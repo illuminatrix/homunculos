@@ -13,7 +13,8 @@ include kernel/Makefile.mk
 include shell/Makefile.mk
 include drivers/Makefile.mk
 DISK_IMG := disk.img
-QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait
+CMDLINE ?= root=/dev/hda1
+QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait -append "$(CMDLINE)"
 
 
 %.o: %.S

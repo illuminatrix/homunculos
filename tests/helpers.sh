@@ -56,6 +56,7 @@ qemu_start() {
 		-display none \
 		-monitor "unix:${MONITOR_SOCK},server,nowait" \
 		-no-reboot \
+		-append "root=/dev/hda1" \
 		&
 	QEMU_PID=$!
 	local waited=0
@@ -75,6 +76,7 @@ qemu_start_with_disk() {
 		-display none \
 		-monitor "unix:${MONITOR_SOCK},server,nowait" \
 		-no-reboot \
+		-append "root=/dev/hda1" \
 		&
 	QEMU_PID=$!
 	local waited=0
