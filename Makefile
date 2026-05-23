@@ -57,6 +57,7 @@ $(DISK_IMG): shell/shell
 	# Create ext2 partition image with /dev and /bin directories
 	dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
 	mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
+	debugfs -w .part.img -R "rmdir /lost+found" 2>/dev/null
 	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
 	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
 	debugfs -w .part.img -R "write shell/shell /bin/shell" 2>/dev/null

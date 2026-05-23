@@ -22,6 +22,7 @@ rm -f "$DISK_IMG"
 # Create raw ext2 partition image with /dev, /bin and test files
 dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
 mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
+debugfs -w .part.img -R "rmdir /lost+found" 2>/dev/null
 
 debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
 debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
@@ -90,8 +91,8 @@ monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 3
 
 vga_full=$(vga_text)
-if echo "$vga_full" | grep -q "hello.txt" && echo "$vga_full" | grep -q "lost+found"; then
-	pass "'ls /' shows 'hello.txt' and 'lost+found' on ext2"
+if echo "$vga_full" | grep -q "hello.txt"; then
+	pass "'ls /' shows 'hello.txt' on ext2"
 else
 	fail "'ls /' missing expected entries. VGA: [$(echo "$vga_full" | tail -c 200)]"
 	errors=$((errors + 1))
