@@ -2,7 +2,7 @@
 # Test: tmpfs filesystem via ls and cat shell commands
 source "$(dirname "$0")/helpers.sh"
 
-check_deps qemu-system-i386 socat || exit 1
+check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
 echo "=== tmpfs Filesystem Test ==="
 echo "  Subtest 1: Shell prompt '>' appears after boot"
@@ -11,7 +11,8 @@ echo "  Subtest 3: 'ls /dev' shows 'hello'"
 echo "  Subtest 4: 'cat /dev/hello' shows 'hello fs'"
 echo "  Subtest 5: 'poweroff' shuts down QEMU (regression)"
 
-qemu_start 15 || { fail "QEMU failed to start"; exit 1; }
+prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
+qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
 errors=0
 

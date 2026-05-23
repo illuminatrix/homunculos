@@ -32,6 +32,25 @@ check_deps() {
 	return $missing
 }
 
+prepare_basic_disk() {
+	local shell_bin="${TESTS_DIR}/../shell/shell"
+	if [ ! -f "$shell_bin" ]; then
+		echo "ERROR: shell binary not found at $shell_bin" >&2
+		return 1
+	fi
+	rm -f "$DISK_IMG"
+	dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
+	mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
+	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
+	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
+	debugfs -w .part.img -R "write $shell_bin /bin/shell" 2>/dev/null
+	dd if=/dev/zero of="$DISK_IMG" bs=1M count=32 2>/dev/null
+	printf '2048,,L,*\n' | sfdisk "$DISK_IMG" 2>/dev/null
+	dd if=.part.img of="$DISK_IMG" bs=512 seek=2048 conv=notrunc 2>/dev/null
+	rm -f .part.img
+	return 0
+}
+
 qemu_start() {
 	qemu-system-i386 -kernel "$KERNEL_BIN" \
 		-display none \

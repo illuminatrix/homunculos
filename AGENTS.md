@@ -226,6 +226,7 @@ tests/               -- QEMU integration tests
 - **ATA polling in QEMU TCG**: Tight polling loops on PIO status registers may hang because QEMU TCG virtual time doesn't advance for the device model. Always include `io_delay()` (volatile delay loop) between polling iterations.
 - **vsprintf only handles %c, %s, %d**: No support for hex, unsigned, width, or precision.
 - **No heap allocator**: Only `mm_frame_alloc()` (4KB pages). No malloc/kmalloc/brk.
+- **memcmp broken in inline asm**: `libc/string/memcmp.c` had a bug where label `2:` (set result to 0 for "equal") always executed AFTER label `1:` (negate result for "less than"), causing memcmp to ALWAYS return 0 regardless of input. Fixed by using a simple C loop. If you add inline asm with multiple labels, make sure label paths are exclusive (use `jmp` after `1:` to skip `2:` when `a > b`).
 
 ## QEMU Testing / Debugging
 

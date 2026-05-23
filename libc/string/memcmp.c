@@ -3,20 +3,13 @@
 int
 memcmp( const void * a_ptr, const void * b_ptr, size_t len )
 {
-    int result = 1;
+	const unsigned char *a = (const unsigned char *)a_ptr;
+	const unsigned char *b = (const unsigned char *)b_ptr;
+	size_t i;
 
-     __asm__ __volatile__ ( "      \
-         cld; repe cmpsb;          \
-         jecxz  2f;                \
-         jl 1f;                   \
-                                   \
-         1:                        \
-             negl (%[RES]);        \
-         2:                        \
-             movl $0, (%[RES]);"
-         : "+c" ( len ), "+S" ( a_ptr ),  "+D" ( b_ptr )
-         :  [RES] "r" ( &result )
-     );
-
-    return result;
+	for (i = 0; i < len; i++) {
+		if (a[i] != b[i])
+			return a[i] < b[i] ? -1 : 1;
+	}
+	return 0;
 }

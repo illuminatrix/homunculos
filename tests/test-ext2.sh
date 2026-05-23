@@ -2,7 +2,7 @@
 # Test: ext2 filesystem mounted at root /, tmpfs at /dev
 source "$(dirname "$0")/helpers.sh"
 
-check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs || exit 1
+check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
 echo "=== ext2 Filesystem Test ==="
 echo "  Subtest 1: Boot welcome message"
@@ -14,16 +14,20 @@ echo "  Subtest 6: 'poweroff' shuts down QEMU (regression)"
 
 errors=0
 
-# --- Create partitioned ext2 disk image ---
+# --- Create partitioned ext2 disk image with /bin/shell ---
 DISK_SIZE=32
 PART_START=2048
 rm -f "$DISK_IMG"
 
-# Create raw ext2 partition image with /dev and test files
+# Create raw ext2 partition image with /dev, /bin and test files
 dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
 mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
 
 debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
+debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
+
+# Add shell binary
+debugfs -w .part.img -R "write ${TESTS_DIR}/../shell/shell /bin/shell" 2>/dev/null
 
 # Create a temp file with known content
 TEST_CONTENT=$(mktemp)

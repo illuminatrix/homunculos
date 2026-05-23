@@ -43,7 +43,7 @@ gdb:
 
 .PHONY: test clean quit
 
-test: kernel.bin
+test: kernel.bin shell/shell
 	$(MAKE) -C tests test
 
 quit:
@@ -51,12 +51,14 @@ quit:
 
 DISK_SIZE_MB ?= 32
 
-$(DISK_IMG):
+$(DISK_IMG): shell/shell
 	dd if=/dev/zero of=$@ bs=1M count=$(DISK_SIZE_MB) 2>/dev/null
-	# Create ext2 partition image with /dev directory
+	# Create ext2 partition image with /dev and /bin directories
 	dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
 	mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
 	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
+	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
+	debugfs -w .part.img -R "write shell/shell /bin/shell" 2>/dev/null
 	# Create MBR partition table on disk image
 	printf '2048,,L,*\n' | sfdisk $@ 2>/dev/null
 	# Write ext2 partition at sector 2048 (1MB offset)
@@ -69,4 +71,4 @@ disk: $(DISK_IMG)
 clean:
 	cd libc && make clean
 	find drivers -name '*.o' -delete
-	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o *.bin *.lst serial.log qemu-monitor.sock $(DISK_IMG)
+	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o shell/shell *.bin *.lst serial.log qemu-monitor.sock $(DISK_IMG)

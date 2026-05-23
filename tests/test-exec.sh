@@ -9,7 +9,7 @@
 #   5. "poweroff" shuts down QEMU (regression)
 source "$(dirname "$0")/helpers.sh"
 
-check_deps qemu-system-i386 socat || exit 1
+check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
 echo "=== ELF Exec / Join Feature Test ==="
 echo "  Subtest 1: Boot welcome message"
@@ -18,7 +18,8 @@ echo "  Subtest 3: 'greeting' still works (regression - fork+exec+join)"
 echo "  Subtest 4: Ring 3 CS register (regression)"
 echo "  Subtest 5: 'poweroff' shuts down QEMU (regression)"
 
-qemu_start 15 || { fail "QEMU failed to start"; exit 1; }
+prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
+qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
 errors=0
 
