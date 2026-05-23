@@ -28,6 +28,11 @@
 1. Append `<path/to/file.o>` to the appropriate `Makefile.mk`
 2. `drivers/Makefile.mk` includes sub-driver makefiles; add an `include` line there when adding a driver
 
+### Before committing
+
+Update `README.md` and `TODO.txt` if the change affects the feature list
+or the porting roadmap.
+
 ### Committing
 
 Use `git commit -s` and append `Assisted-by: big-pickle:opencode/big-pickle` trailer.

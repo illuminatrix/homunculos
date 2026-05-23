@@ -1,0 +1,101 @@
+TODO: Toybox Porting
+
+Toybox (https://github.com/landley/toybox) is the target userspace.
+The kernel needs new syscalls and VFS features to run it.
+
+Build (on Linux host, not in-kernel):
+  CROSS_COMPILE=i686-elf- make defconfig toybox
+  Build statically against musl; our ELF loader handles the result.
+
+===== P0: Blocking (most commands fail without these) =====
+
+[ ] brk/sbrk   -- per-task heap via syscall.     kernel/syscall.c
+    Need a writable region in the page directory, task-local break addr.
+
+[ ] stat/fstat/lstat   -- SYS_stat (106), SYS_fstat (108), SYS_lstat (107)
+    Define struct stat (i386), expose inode metadata (size, type, mtime)
+    through VFS inode ops.  syscall.c
+
+[ ] getdents64   -- SYS_getdents64 (220)
+    Directory read returns space-separated names via read(fd); toybox
+    expects struct linux_dirent64.  Need a real getdents syscall that
+    iterates vfs_inode_ops->readdir.  kernel/syscall.c + vfs
+
+[ ] ioctl    -- SYS_ioctl (54)
+    At minimum TCGETS/TCSETS for terminal control (echo, line buffering,
+    signal chars).  VGA text driver and PS/2 kbd driver need ioctl
+    handlers.
+
+[ ] chdir/getcwd   -- SYS_chdir (12), SYS_getcwd (183)
+    Add cwd_inode to task struct in kernel/task.h, resolve relative
+    paths against it in vfs_resolve_path().  kernel/syscall.c + vfs
+
+[ ] getpid/getppid   -- SYS_getpid (20), SYS_getppid (64)
+    Trivial: read from scheduler_get_current()->pid / parent_pid.
+
+[ ] lseek   -- SYS_lseek (19)
+    VFS file struct already tracks f_pos.  Add syscall to set it.
+
+[ ] uname   -- SYS_uname (122)
+    Return fixed struct utsname (i686, illuminatrix, ...).
+
+===== P1: Pipeline / Shell (for a usable shell) =====
+
+[ ] pipe    -- SYS_pipe (42) / SYS_pipe2 (331)
+    Need a tmpfs-backed pipe buffer, returns two fds.
+
+[ ] dup/dup2   -- SYS_dup (32), SYS_dup2 (99)
+    Copy fd table entries.  Needed for redirection.
+
+[ ] waitpid options   -- currently ignores pid, WNOHANG, etc.
+    Support pid==-1, pid==child_pid, WNOHANG.  kernel/task.c
+
+[ ] exec with argv/envp   -- currently takes path only.
+    Toybox needs argv (command name lookup, flags).
+
+===== P2: VFS / Filesystem Improvements =====
+
+[ ] ext2 write support   -- inode_ops->write, add_entry
+    ext2 is read-only; no file creation, no mkdir, no unlink.
+
+[ ] open() flags   -- O_CREAT, O_TRUNC, O_RDWR, O_WRONLY
+    Currently ignores flags param.  kernel/syscall.c
+
+[ ] access   -- SYS_access (33)
+    Check file existence / mode.  Kernel currently has no permission model;
+    could just return 0 if the inode exists.
+
+[ ] mkdir/rmdir   -- SYS_mkdir (39), SYS_rmdir (40)
+    Delegate to vfs_inode_ops->add_entry (tmpfs), ext2 write when ready.
+
+[ ] unlink   -- SYS_unlink (87)
+    Same dependency.
+
+[ ] symlink/readlink   -- SYS_symlink (83), SYS_readlink (85)
+    VFS needs a VFS_ISYMLINK type.
+
+===== P3: Signals (hard, deferrable) =====
+
+[ ] kill   -- SYS_kill (37)
+[ ] signal/sigaction   -- SYS_signal (48), SYS_rt_sigaction (67)
+[ ] SIGINT (Ctrl+C) from keyboard driver
+[ ] SIGCHLD on child exit
+[ ] sigreturn
+
+===== P4: Time (needed for timestamps, sleep) =====
+
+[ ] gettimeofday   -- SYS_gettimeofday (78)
+    Read PIT tick count, convert to seconds+usec.
+
+[ ] time   -- SYS_time (13)
+[ ] nanosleep   -- SYS_nanosleep (162)
+
+===== P5: Misc / Nice-to-Have =====
+
+[ ] exit_group   -- SYS_exit_group (252)
+    Just alias to exit.
+
+[ ] reboot() with magic args   -- LINUX_REBOOT_MAGIC1/2
+[ ] /dev/null   -- writes discarded, reads return EOF
+[ ] /dev/tty   -- symlink to current controlling terminal
+[ ] environ / env vars in exec
