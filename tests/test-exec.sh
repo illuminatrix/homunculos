@@ -50,15 +50,6 @@ fi
 assert_user_mode "Subtest 2: Ring 3 CS register after shell prompt"
 errors=$((errors + $?))
 
-# --- Subtest 3: Type "run" command, verify child ELF output ---
-for ch in r u n; do
-	monitor_cmd "sendkey $ch" >/dev/null 2>&1
-	sleep 0.08
-done
-sleep 0.2
-monitor_cmd "sendkey ret" >/dev/null 2>&1
-sleep 4
-
 # --- Subtest 3: Greeting command regression ---
 for ch in g r e e t i n g; do
 	monitor_cmd "sendkey $ch" >/dev/null 2>&1
@@ -76,7 +67,7 @@ else
 	errors=$((errors + 1))
 fi
 
-assert_user_mode "Subtest 4: Ring 3 CS register after greeting (regression)"
+assert_user_mode "Subtest 3: Ring 3 CS register after greeting (regression)"
 errors=$((errors + $?))
 
 # --- Subtest 5: Poweroff regression ---

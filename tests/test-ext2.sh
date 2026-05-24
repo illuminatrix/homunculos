@@ -33,6 +33,14 @@ debugfs -w .part.img -R "write ${TESTS_DIR}/../shell/shell /bin/shell" 2>/dev/nu
 # Add init binary  
 debugfs -w .part.img -R "write ${TESTS_DIR}/../init/init /bin/init" 2>/dev/null
 
+# Add command binaries
+for cmd in poweroff greeting uname ls cat stat hello; do
+	src="${TESTS_DIR}/../shell/bin/$cmd"
+	if [ -f "$src" ]; then
+		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null
+	fi
+done
+
 # Create a temp file with known content
 TEST_CONTENT=$(mktemp)
 printf "Hello from ext2!" > "$TEST_CONTENT"

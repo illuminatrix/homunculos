@@ -6,8 +6,8 @@ check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
 echo "=== execv with argv Test ==="
 echo "  Subtest 1: Boot + shell prompt"
-echo "  Subtest 2: run /bin/hello (no extra args) prints argv[0]"
-echo "  Subtest 3: run /bin/hello foo bar (with extra args)"
+echo "  Subtest 2: hello (no extra args) prints argv[0]"
+echo "  Subtest 3: hello foo bar (with extra args)"
 echo "  Subtest 4: poweroff (regression)"
 
 prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
@@ -33,29 +33,29 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- Subtest 2: run /bin/hello (no extra args) ---
-send_keys "run /bin/hello" 0.08
+# --- Subtest 2: /bin/hello (no extra args) ---
+send_keys "hello" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 5
 
-if vga_contains "argc=1" && vga_contains "argv[0]=/bin/hello"; then
-	pass "hello.elf reports argc=1, argv[0]=/bin/hello"
+if vga_contains "argc=1" && vga_contains "argv[0]=hello"; then
+	pass "hello.elf reports argc=1, argv[0]=hello"
 else
 	vga_raw=$(vga_text | tail -c 200)
 	fail "argv[0] not found. VGA tail: [$vga_raw]"
 	errors=$((errors + 1))
 fi
 
-if vga_contains "exec: execv failed"; then
-	fail "execv reported failure"
+if vga_contains "not found"; then
+	fail "command not found"
 	errors=$((errors + 1))
 else
 	pass "execv did not report failure"
 fi
 
-# --- Subtest 3: run /bin/hello with extra arguments ---
-send_keys "run /bin/hello foo bar" 0.08
+# --- Subtest 3: /bin/hello with extra arguments ---
+send_keys "hello foo bar" 0.08
 sleep 0.3
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 5

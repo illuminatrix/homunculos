@@ -13,6 +13,7 @@ include kernel/Makefile.mk
 include shell/Makefile.mk
 include init/Makefile.mk
 include drivers/Makefile.mk
+include shell/bin/Makefile.mk
 DISK_IMG := disk.img
 CMDLINE ?= root=/dev/hda1 init=/bin/init
 QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -display curses -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait -append "$(CMDLINE)"
@@ -45,7 +46,7 @@ gdb:
 
 .PHONY: test clean quit
 
-test: kernel.bin shell/shell $(INIT_ELF) $(CMD_ELFS)
+test: kernel.bin shell/shell $(INIT_ELF) $(BIN_CMDS)
 	$(MAKE) -C tests test
 
 quit:
@@ -53,7 +54,7 @@ quit:
 
 DISK_SIZE_MB ?= 32
 
-$(DISK_IMG): shell/shell $(INIT_ELF) $(CMD_ELFS)
+$(DISK_IMG): shell/shell $(INIT_ELF) $(BIN_CMDS)
 	dd if=/dev/zero of=$@ bs=1M count=$(DISK_SIZE_MB) 2>/dev/null
 	# Create ext2 partition image with /dev and /bin directories
 	dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
@@ -63,7 +64,10 @@ $(DISK_IMG): shell/shell $(INIT_ELF) $(CMD_ELFS)
 	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
 	debugfs -w .part.img -R "write shell/shell /bin/shell" 2>/dev/null
 	debugfs -w .part.img -R "write init/init /bin/init" 2>/dev/null
-	debugfs -w .part.img -R "write shell/hello.elf /bin/hello" 2>/dev/null
+	for cmd in $(BIN_CMDS); do \
+		name=$$(basename $$cmd); \
+		debugfs -w .part.img -R "write $$cmd /bin/$$name" 2>/dev/null; \
+	done
 	# Create MBR partition table on disk image
 	printf '2048,,L,*\n' | sfdisk $@ 2>/dev/null
 	# Write ext2 partition at sector 2048 (1MB offset)
@@ -76,4 +80,4 @@ disk: $(DISK_IMG)
 clean:
 	cd libc && make clean
 	find drivers -name '*.o' -delete
-	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o shell/shell *.bin *.lst serial.log qemu-monitor.sock $(DISK_IMG)
+	rm -f *.o arch/$(ARCH)/*o kernel/*.o shell/*.o shell/shell shell/bin/*.o $(BIN_CMDS) *.bin *.lst serial.log qemu-monitor.sock $(DISK_IMG)
