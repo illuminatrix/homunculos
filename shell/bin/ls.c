@@ -14,7 +14,7 @@ void _start(void)
 		: "memory"
 	);
 
-	const char *path = "/";
+	const char *path = ".";
 	if (argc > 1)
 		path = argv[1];
 

@@ -32,6 +32,8 @@ unistd/stat.o \
 unistd/lstat.o \
 unistd/fstat.o \
 unistd/getdents.o \
+unistd/chdir.o \
+unistd/getcwd.o \
 
 OBJS:=\
 $(FREEOBJS) \

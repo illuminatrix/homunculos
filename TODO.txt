@@ -26,9 +26,9 @@ Build (on Linux host, not in-kernel):
     signal chars).  VGA text driver and PS/2 kbd driver need ioctl
     handlers.
 
-[ ] chdir/getcwd   -- SYS_chdir (12), SYS_getcwd (183)
-    Add cwd_inode to task struct in kernel/task.h, resolve relative
-    paths against it in vfs_resolve_path().  kernel/syscall.c + vfs
+[x] chdir/getcwd   -- SYS_chdir (12), SYS_getcwd (183)
+    Add cwd buffer to task struct, resolve relative paths using
+    cwd prepend + normalize_path helper in syscall.c.  kernel/syscall.c + vfs
 
 [x] getpid/getppid   -- SYS_getpid (20), SYS_getppid (64)
     Trivial: read from scheduler_get_current()->pid / parent_pid.

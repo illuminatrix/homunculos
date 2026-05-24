@@ -1,4 +1,4 @@
-BIN_CMDS := shell/bin/poweroff shell/bin/greeting shell/bin/uname shell/bin/ls shell/bin/cat shell/bin/stat shell/bin/hello
+BIN_CMDS := shell/bin/poweroff shell/bin/greeting shell/bin/uname shell/bin/ls shell/bin/cat shell/bin/stat shell/bin/hello shell/bin/pwd shell/bin/cd
 
 $(BIN_CMDS): shell/bin/%: shell/bin/%.c
 	cd libc && make

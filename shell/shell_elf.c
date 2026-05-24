@@ -56,6 +56,15 @@ static void shell_execute(char *buf)
 	if (argc == 0)
 		return;
 
+	if (strcmp(argv[0], "cd") == 0) {
+		const char *dir = "/";
+		if (argc > 1)
+			dir = argv[1];
+		if (chdir(dir) < 0)
+			printf("cd: %s: failed\n", dir);
+		return;
+	}
+
 	int pid = fork();
 	if (pid < 0) {
 		printf("fork failed\n");

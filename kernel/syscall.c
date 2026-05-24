@@ -43,6 +43,71 @@ static void poweroff(void)
 		__asm__ volatile("hlt");
 }
 
+static void normalize_path(char *path)
+{
+	char out[256];
+	int o = 0, i = 0;
+
+	strncpy(out, path, sizeof(out) - 1);
+	out[sizeof(out) - 1] = '\0';
+
+	if (out[0] != '/')
+		return;
+
+	o = 1;
+	i = 1;
+
+	while (out[i]) {
+		while (out[i] == '/')
+			i++;
+		if (!out[i])
+			break;
+
+		int start = i;
+		while (out[i] && out[i] != '/')
+			i++;
+		int len = i - start;
+
+		if (len == 1 && out[start] == '.')
+			continue;
+
+		if (len == 2 && out[start] == '.' && out[start + 1] == '.') {
+			if (o > 1) {
+				o--;
+				while (o > 0 && out[o - 1] != '/')
+					o--;
+			}
+			continue;
+		}
+
+		if (out[o - 1] != '/')
+			out[o++] = '/';
+		memcpy(out + o, out + start, len);
+		o += len;
+	}
+
+	out[o] = '\0';
+	strcpy(path, out);
+}
+
+static struct vfs_inode *resolve_path(struct task *t, const char *path)
+{
+	if (!path || !t)
+		return 0;
+	if (path[0] == '/')
+		return vfs_resolve_path(path);
+
+	char buf[512];
+	int len = strlen(t->cwd);
+	memcpy(buf, t->cwd, len);
+	if (buf[len - 1] != '/')
+		buf[len++] = '/';
+	strcpy(buf + len, path);
+	normalize_path(buf);
+
+	return vfs_resolve_path(buf);
+}
+
 int
 sys_open(const char *path, int flags)
 {
@@ -53,7 +118,7 @@ sys_open(const char *path, int flags)
 
 	(void)flags;
 
-	inode = vfs_resolve_path(path);
+	inode = resolve_path(current, path);
 	if (!inode)
 		return -1;
 
@@ -236,7 +301,7 @@ sys_exec(const char *path, char **argv, char **envp)
 	if (!current)
 		return -1;
 
-	ino = vfs_resolve_path(path);
+	ino = resolve_path(current, path);
 	if (!ino)
 		return -1;
 	if (ino->i_type != VFS_IFILE)
@@ -593,7 +658,9 @@ sys_stat(const char *path, struct vfs_stat *buf)
 	if (!path || !buf)
 		return -1;
 
-	inode = vfs_resolve_path(path);
+	struct task *current = scheduler_get_current();
+
+	inode = resolve_path(current, path);
 	if (!inode)
 		return -1;
 
@@ -632,6 +699,60 @@ sys_fstat(int fd, struct vfs_stat *buf)
 
 	vfs_inode_stat(inode, buf);
 	return 0;
+}
+
+int
+sys_chdir(const char *path)
+{
+	struct task *current = scheduler_get_current();
+	struct vfs_inode *inode;
+	char buf[512];
+
+	if (!current || !path)
+		return -1;
+
+	if (path[0] == '/') {
+		inode = vfs_resolve_path(path);
+		if (!inode || inode->i_type != VFS_IDIR)
+			return -1;
+		strncpy(buf, path, sizeof(buf) - 1);
+		buf[sizeof(buf) - 1] = '\0';
+		normalize_path(buf);
+		strncpy(current->cwd, buf, sizeof(current->cwd) - 1);
+		current->cwd[sizeof(current->cwd) - 1] = '\0';
+		return 0;
+	}
+
+	strcpy(buf, current->cwd);
+	int len = strlen(buf);
+	if (buf[len - 1] != '/')
+		buf[len++] = '/';
+	strcpy(buf + len, path);
+	normalize_path(buf);
+
+	inode = vfs_resolve_path(buf);
+	if (!inode || inode->i_type != VFS_IDIR)
+		return -1;
+
+	strncpy(current->cwd, buf, sizeof(current->cwd) - 1);
+	current->cwd[sizeof(current->cwd) - 1] = '\0';
+	return 0;
+}
+
+int
+sys_getcwd(char *buf, size_t size)
+{
+	struct task *current = scheduler_get_current();
+
+	if (!current || !buf || !size)
+		return -1;
+
+	int len = strlen(current->cwd);
+	if ((size_t)(len + 1) > size)
+		return -1;
+
+	memcpy(buf, current->cwd, len + 1);
+	return len;
 }
 
 int
@@ -706,4 +827,6 @@ syscall_init(void)
 	systemcall_table[SYS_lstat]     = (uint32_t)sys_lstat;
 	systemcall_table[SYS_fstat]     = (uint32_t)sys_fstat;
 	systemcall_table[SYS_getdents] = (uint32_t)sys_getdents;
+	systemcall_table[SYS_chdir]   = (uint32_t)sys_chdir;
+	systemcall_table[SYS_getcwd]  = (uint32_t)sys_getcwd;
 }

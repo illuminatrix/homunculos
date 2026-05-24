@@ -10,6 +10,7 @@
 #define SYS_close       6
 #define SYS_waitpid     7
 #define SYS_execve     11
+#define SYS_chdir     12
 #define SYS_lseek     19
 #define SYS_getpid     20
 #define SYS_mount      21
@@ -23,5 +24,6 @@
 #define SYS_fstat     108
 #define SYS_uname    122
 #define SYS_getdents  141
+#define SYS_getcwd   183
 
 #endif

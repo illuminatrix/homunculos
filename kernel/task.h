@@ -31,6 +31,7 @@ struct task {
 	int is_user;
 	uint32_t brk_start;
 	uint32_t program_break;
+	char cwd[256];
 };
 
 struct task *task_alloc(void);
