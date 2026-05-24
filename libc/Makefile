@@ -25,6 +25,8 @@ unistd/unmount.o \
 unistd/yield.o \
 unistd/getpid.o \
 unistd/getppid.o \
+unistd/uname.o \
+unistd/lseek.o \
 
 OBJS:=\
 $(FREEOBJS) \

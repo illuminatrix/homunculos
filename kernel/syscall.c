@@ -399,6 +399,73 @@ sys_getppid(void)
 	return current->parent_pid;
 }
 
+#define UTSNAME_LEN 65
+
+struct sys_utsname {
+	char sysname[UTSNAME_LEN];
+	char nodename[UTSNAME_LEN];
+	char release[UTSNAME_LEN];
+	char version[UTSNAME_LEN];
+	char machine[UTSNAME_LEN];
+	char domainname[UTSNAME_LEN];
+};
+
+int
+sys_uname(struct sys_utsname *buf)
+{
+	if (!buf)
+		return -1;
+
+	memset(buf->sysname, 0, UTSNAME_LEN);
+	memset(buf->nodename, 0, UTSNAME_LEN);
+	memset(buf->release, 0, UTSNAME_LEN);
+	memset(buf->version, 0, UTSNAME_LEN);
+	memset(buf->machine, 0, UTSNAME_LEN);
+	memset(buf->domainname, 0, UTSNAME_LEN);
+
+	strncpy(buf->sysname, "Illuminatrix", UTSNAME_LEN - 1);
+	strncpy(buf->nodename, "illuminatrix", UTSNAME_LEN - 1);
+	strncpy(buf->release, "0.1.0", UTSNAME_LEN - 1);
+	strncpy(buf->version, "#1 Sat May 23 2026", UTSNAME_LEN - 1);
+	strncpy(buf->machine, "i686", UTSNAME_LEN - 1);
+	strncpy(buf->domainname, "(none)", UTSNAME_LEN - 1);
+
+	return 0;
+}
+
+int
+sys_lseek(int fd, int offset, int whence)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+	uint32_t new_pos;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	switch (whence) {
+	case 0: /* SEEK_SET */
+		new_pos = (uint32_t)offset;
+		break;
+	case 1: /* SEEK_CUR */
+		new_pos = f->pos + offset;
+		break;
+	case 2: /* SEEK_END */
+		return -1;
+	default:
+		return -1;
+	}
+
+	f->pos = new_pos;
+	return (int)new_pos;
+}
+
 void
 syscall_init(void)
 {
@@ -416,4 +483,6 @@ syscall_init(void)
 	systemcall_table[SYS_reboot]      = (uint32_t)sys_reboot;
 	systemcall_table[SYS_getpid]      = (uint32_t)sys_getpid;
 	systemcall_table[SYS_getppid]     = (uint32_t)sys_getppid;
+	systemcall_table[SYS_uname]      = (uint32_t)sys_uname;
+	systemcall_table[SYS_lseek]      = (uint32_t)sys_lseek;
 }

@@ -8,6 +8,10 @@
 extern "C" {
 #endif
 
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
 int fork(void);
 int read(int, void *, size_t);
 int open(const char *, int);
@@ -20,6 +24,7 @@ int yield(void);
 int reboot(void);
 int getpid(void);
 int getppid(void);
+int lseek(int, int, int);
 void exit(int);
 
 #ifdef __cplusplus
