@@ -100,11 +100,6 @@ syscall_handler:
 	# return is available in %eax
 	iretl
 
-.global yield_handler
-yield_handler:
-	call schedule
-	iretl
-
 .global fork_return
 fork_return:
 	movl $0, %eax

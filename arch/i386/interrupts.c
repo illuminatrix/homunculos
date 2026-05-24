@@ -73,16 +73,6 @@ void load_idt(void)
         irq_offset += irq_size_w_error;
     }
 
-	extern void yield_handler(void);
-	uint32_t yield_base = (uint32_t)yield_handler;
-	idt[0x31].type = 0xE;
-	idt[0x31].p = 1;
-	idt[0x31].s = 0;
-	idt[0x31].dpl = 3;
-	idt[0x31].seg_sel = 0x8;
-	idt[0x31].offset15_0 = (uint16_t)(yield_base);
-	idt[0x31].offset31_16 = (uint16_t)(yield_base >> 16);
-
 	uint32_t syscall_base = (uint32_t)syscall_handler;
 	idt[0x80].type = 0xE;
 	idt[0x80].p = 1;

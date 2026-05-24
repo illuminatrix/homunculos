@@ -246,5 +246,5 @@ struct task *task_find_child_exited(int parent_pid)
 
 void task_yield(void)
 {
-	asm volatile("int $0x31");
+	schedule();
 }
