@@ -195,7 +195,7 @@ send_keys() {
 			.)     key_name="dot" ;;
 			,)     key_name="comma" ;;
 			!)     key_name="shift-1" ;;
-			?)     key_name="shift-slash" ;;
+			"?")   key_name="shift-slash" ;;
 			[a-z]) key_name="$ch" ;;
 			[A-Z]) key_name="shift-$(echo "$ch" | tr '[:upper:]' '[:lower:]')" ;;
 			[0-9]) key_name="$ch" ;;

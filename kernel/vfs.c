@@ -365,6 +365,40 @@ static int vfs_file_read(struct file *f, void *buf, size_t nbyte)
 	return ret;
 }
 
+void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
+{
+	unsigned short mode = 0;
+
+	if (!inode || !buf)
+		return;
+
+	switch (inode->i_type) {
+	case VFS_IFILE:
+		mode = 0100644;  /* S_IFREG | S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH */
+		break;
+	case VFS_IDIR:
+		mode = 040755;   /* S_IFDIR | S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH */
+		break;
+	default:
+		mode = 0100644;
+		break;
+	}
+
+	buf->st_dev     = 0;
+	buf->st_ino     = inode->i_no;
+	buf->st_mode    = mode;
+	buf->st_nlink   = (inode->i_type == VFS_IDIR) ? 2 : 1;
+	buf->st_uid     = 0;
+	buf->st_gid     = 0;
+	buf->st_rdev    = 0;
+	buf->st_size    = inode->i_size;
+	buf->st_blksize = 1024;
+	buf->st_blocks  = (inode->i_size + 511) / 512;
+	buf->st_atime   = 0;
+	buf->st_mtime   = 0;
+	buf->st_ctime   = 0;
+}
+
 static int vfs_file_write(struct file *f, const void *buf, size_t nbyte)
 {
 	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;

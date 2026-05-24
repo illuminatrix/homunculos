@@ -12,7 +12,7 @@ Build (on Linux host, not in-kernel):
 [x] brk/sbrk   -- per-task heap via syscall.     kernel/syscall.c
     Need a writable region in the page directory, task-local break addr.
 
-[ ] stat/fstat/lstat   -- SYS_stat (106), SYS_fstat (108), SYS_lstat (107)
+[x] stat/fstat/lstat   -- SYS_stat (106), SYS_fstat (108), SYS_lstat (107)
     Define struct stat (i386), expose inode metadata (size, type, mtime)
     through VFS inode ops.  syscall.c
 

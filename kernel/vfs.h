@@ -32,6 +32,23 @@ typedef void (*vfs_driver_init_fn)(void);
 /* VFS core API */
 void vfs_init(void);
 
+/* Kernel-side struct stat (matches libc <sys/stat.h> layout) */
+struct vfs_stat {
+	unsigned long st_dev;
+	unsigned long st_ino;
+	unsigned short st_mode;
+	unsigned short st_nlink;
+	unsigned short st_uid;
+	unsigned short st_gid;
+	unsigned long st_rdev;
+	unsigned long st_size;
+	unsigned long st_blksize;
+	unsigned long st_blocks;
+	unsigned long st_atime;
+	unsigned long st_mtime;
+	unsigned long st_ctime;
+};
+
 /* === VFS Inode Layer === */
 
 #define VFS_IFILE 0
@@ -82,6 +99,7 @@ struct vfs_inode *vfs_root_inode(void);
 void vfs_set_root_inode(struct vfs_inode *inode);
 struct vfs_inode *vfs_resolve_path(const char *path);
 int vfs_register_by_path(const char *path, struct vfs_inode *inode);
+void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf);
 int vfs_register_device(const char *name, const struct vfs_ops *ops,
 			void *private_data);
 void vfs_create_device_nodes(void);

@@ -501,6 +501,55 @@ sys_lseek(int fd, int offset, int whence)
 	return (int)new_pos;
 }
 
+int
+sys_stat(const char *path, struct vfs_stat *buf)
+{
+	struct vfs_inode *inode;
+
+	if (!path || !buf)
+		return -1;
+
+	inode = vfs_resolve_path(path);
+	if (!inode)
+		return -1;
+
+	vfs_inode_stat(inode, buf);
+	return 0;
+}
+
+int
+sys_lstat(const char *path, struct vfs_stat *buf)
+{
+	/* No symlinks yet — same as stat */
+	return sys_stat(path, buf);
+}
+
+int
+sys_fstat(int fd, struct vfs_stat *buf)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+	struct vfs_inode *inode;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+	if (!buf)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	inode = (struct vfs_inode *)f->private_data;
+	if (!inode)
+		return -1;
+
+	vfs_inode_stat(inode, buf);
+	return 0;
+}
+
 void
 syscall_init(void)
 {
@@ -521,4 +570,7 @@ syscall_init(void)
 	systemcall_table[SYS_uname]      = (uint32_t)sys_uname;
 	systemcall_table[SYS_lseek]      = (uint32_t)sys_lseek;
 	systemcall_table[SYS_brk]       = (uint32_t)sys_brk;
+	systemcall_table[SYS_stat]      = (uint32_t)sys_stat;
+	systemcall_table[SYS_lstat]     = (uint32_t)sys_lstat;
+	systemcall_table[SYS_fstat]     = (uint32_t)sys_fstat;
 }

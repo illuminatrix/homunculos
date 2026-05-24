@@ -117,6 +117,9 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 19 | SYS_lseek | `sys_lseek` | `int sys_lseek(int fd, int offset, int whence)` |
 | 20 | SYS_getpid | `sys_getpid` | `int sys_getpid(void)` |
 | 45 | SYS_brk | `sys_brk` | `int sys_brk(void *addr)` |
+| 106 | SYS_stat | `sys_stat` | `int sys_stat(const char *path, struct stat *buf)` |
+| 107 | SYS_lstat | `sys_lstat` | `int sys_lstat(const char *path, struct stat *buf)` |
+| 108 | SYS_fstat | `sys_fstat` | `int sys_fstat(int fd, struct stat *buf)` |
 | 21 | SYS_mount | `sys_mount` | `int sys_mount(const char *source, const char *target, const char *fstype)` |
 | 22 | SYS_umount | `sys_unmount` | `int sys_unmount(const char *target)` |
 | 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |

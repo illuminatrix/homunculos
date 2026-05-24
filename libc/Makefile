@@ -28,6 +28,9 @@ unistd/getppid.o \
 unistd/uname.o \
 unistd/lseek.o \
 unistd/brk.o \
+unistd/stat.o \
+unistd/lstat.o \
+unistd/fstat.o \
 
 OBJS:=\
 $(FREEOBJS) \

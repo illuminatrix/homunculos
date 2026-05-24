@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/utsname.h>
+#include <sys/stat.h>
 
 #define SHELL_BUF_SIZE 64
 
@@ -116,6 +117,17 @@ static void cmd_test_lseek(void)
 	close(fd);
 }
 
+static void cmd_test_stat(const char *path)
+{
+	struct stat st;
+	if (stat(path, &st) < 0) {
+		printf("stat %s failed\n", path);
+		return;
+	}
+	printf("ino=%d mode=%d size=%d\n",
+	       (int)st.st_ino, (int)st.st_mode, (int)st.st_size);
+}
+
 static void shell_execute(const char *buf)
 {
 	if (strcmp(buf, "poweroff") == 0)
@@ -132,6 +144,8 @@ static void shell_execute(const char *buf)
 		cmd_ls(buf + 3);
 	else if (strncmp(buf, "cat ", 4) == 0)
 		cmd_cat(buf + 4);
+	else if (strncmp(buf, "stat ", 5) == 0)
+		cmd_test_stat(buf + 5);
 	else if (buf[0] != '\0')
 		printf("unknown\n");
 }
