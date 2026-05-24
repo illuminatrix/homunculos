@@ -1,20 +1,20 @@
 #!/bin/bash
-# Test: ELF exec (SYS_exec) and join (SYS_join) feature via shell commands
+# Test: ELF exec (SYS_exec) and waitpid (SYS_waitpid) feature via shell commands
 #
 # Verifies:
 #   1. Kernel boots with welcome message (regression)
 #   2. Shell prompt '>' appears (regression)
-#   3. "greeting" produces "hello" (regression - fork+exec+join still work)
+#   3. "greeting" produces "hello" (regression - fork+exec+waitpid still work)
 #   4. Ring 3 CS register is correct throughout (regression)
 #   5. "poweroff" shuts down QEMU (regression)
 source "$(dirname "$0")/helpers.sh"
 
 check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
-echo "=== ELF Exec / Join Feature Test ==="
+echo "=== ELF Exec / Waitpid Feature Test ==="
 echo "  Subtest 1: Boot welcome message"
 echo "  Subtest 2: Shell prompt '>' appears"
-echo "  Subtest 3: 'greeting' still works (regression - fork+exec+join)"
+echo "  Subtest 3: 'greeting' still works (regression - fork+exec+waitpid)"
 echo "  Subtest 4: Ring 3 CS register (regression)"
 echo "  Subtest 5: 'poweroff' shuts down QEMU (regression)"
 

@@ -114,15 +114,21 @@ uint32_t *mm_clone_pdir(uint32_t *parent_pdir)
 	void *new_frame;
 	void *parent_frame;
 
-	new_pdir = (uint32_t *)mm_frame_alloc();
+		new_pdir = (uint32_t *)mm_frame_alloc();
 	if (!new_pdir)
 		return 0;
 
-	for (i = 0; i < DIR_SIZE; i++) {
+	/* Copy kernel identity page table entries (first 4, 0-16MB) directly.
+	 * These are shared with the parent — not cloned. Mark them in new_pdir
+	 * only after all user entries are processed, so error cleanup doesn't
+	 * try to free shared page tables. */
+	memcpy(new_pdir, parent_pdir, 4 * sizeof(uint32_t));
+
+	for (i = 4; i < DIR_SIZE; i++) {
 		if (parent_pdir[i] & 1) {
 			new_pt = (uint32_t *)mm_frame_alloc();
 			if (!new_pt) {
-				for (j = 0; j < i; j++) {
+				for (j = 4; j < i; j++) {
 					if (new_pdir[j] & 1) {
 						uint32_t *pt = (uint32_t *)(new_pdir[j] & ~0xFFF);
 						for (uint32_t k = 0; k < DIR_SIZE; k++) {
@@ -147,7 +153,7 @@ uint32_t *mm_clone_pdir(uint32_t *parent_pdir)
 								mm_frame_free((void *)(new_pt[k] & ~0xFFF));
 						}
 						mm_frame_free(new_pt);
-						for (uint32_t k = 0; k < i; k++) {
+						for (uint32_t k = 4; k < i; k++) {
 							if (new_pdir[k] & 1) {
 								uint32_t *pt2 = (uint32_t *)(new_pdir[k] & ~0xFFF);
 								for (uint32_t l = 0; l < DIR_SIZE; l++) {

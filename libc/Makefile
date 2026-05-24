@@ -17,7 +17,7 @@ unistd/read.o \
 unistd/open.o \
 unistd/close.o \
 unistd/exec.o \
-unistd/join.o \
+unistd/wait.o \
 unistd/exit.o \
 unistd/reboot.o \
 unistd/mount.o \

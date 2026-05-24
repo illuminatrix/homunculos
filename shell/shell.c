@@ -7,9 +7,6 @@
 #define SHELL_BUF_SIZE 64
 #define SHELL_ARGS_MAX 4
 
-extern const uint8_t _binary_examples_hello_elf_start[];
-extern const uint8_t _binary_examples_hello_elf_end[];
-
 static void shell_prompt(void)
 {
 	printf("> ");
@@ -47,19 +44,19 @@ static void cmd_run(void)
 {
 	int pid = fork();
 	if (pid < 0) {
-		printf("fork failed\n");
+		printf("exec: fork failed\n");
 		return;
 	}
 
 	if (pid == 0) {
-		int ret = exec(_binary_examples_hello_elf_start);
-		if (ret < 0)
-			printf("exec failed\n");
+		char *argv[] = { "/bin/hello", 0 };
+		if (execv("/bin/hello", argv) < 0)
+			printf("exec: execv failed\n");
 		exit(1);
 	}
 
-	int child_pid = join();
-	printf("child %d done\n", child_pid);
+	int child_pid = waitpid(-1, 0);
+	printf("exec: child %d done\n", child_pid);
 }
 
 static void cmd_ls(const char *path)
@@ -100,8 +97,10 @@ static void shell_execute(const char *buf)
 		reboot();
 	else if (strcmp(buf, "greeting") == 0)
 		printf("hello\n");
+	else if (strncmp(buf, "run ", 4) == 0)
+		cmd_run(buf + 4);
 	else if (strcmp(buf, "run") == 0)
-		cmd_run();
+		cmd_run("/bin/shell");
 	else if (strcmp(buf, "ls") == 0)
 		cmd_ls("/");
 	else if (strncmp(buf, "ls ", 3) == 0)

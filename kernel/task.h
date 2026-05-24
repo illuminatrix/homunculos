@@ -43,6 +43,7 @@ void task_init_fork_context(struct task *child, uint32_t fork_esp, uint32_t fork
 void task_set_exit_status(int status);
 struct task *task_find_child_exited(int parent_pid);
 void task_update_context_user(struct task *t, uint32_t entry, uint32_t user_esp_top);
+void task_set_pdir(struct task *t, uint32_t *pdir);
 void task_block(void);
 void task_wake(int pid);
 int task_waitpid(int pid, int *status);

@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 #define SHELL_BUF_SIZE 64
+#define CMD_ARGS_MAX 8
 
 static void shell_prompt(void)
 {
@@ -128,6 +129,47 @@ static void cmd_test_stat(const char *path)
 	       (int)st.st_ino, (int)st.st_mode, (int)st.st_size);
 }
 
+static void cmd_run(const char *line)
+{
+	printf("run: %s\n", line);
+
+	char *argv[CMD_ARGS_MAX];
+	int argc = 0;
+	char buf[SHELL_BUF_SIZE];
+	strncpy(buf, line, SHELL_BUF_SIZE - 1);
+	buf[SHELL_BUF_SIZE - 1] = '\0';
+
+	char *p = buf;
+	while (*p && argc < CMD_ARGS_MAX - 1) {
+		while (*p == ' ') p++;
+		if (!*p) break;
+		argv[argc++] = p;
+		while (*p && *p != ' ') p++;
+		if (*p) *p++ = '\0';
+	}
+	argv[argc] = 0;
+
+	if (argc == 0) {
+		printf("run: missing path\n");
+		return;
+	}
+
+	int pid = fork();
+	if (pid < 0) {
+		printf("run: fork failed\n");
+		return;
+	}
+
+	if (pid == 0) {
+		if (execv(argv[0], argv) < 0)
+			printf("exec: execv failed\n");
+		exit(1);
+	}
+
+	int child_pid = waitpid(pid, 0);
+	printf("exec: child %d done\n", child_pid);
+}
+
 static void shell_execute(const char *buf)
 {
 	if (strcmp(buf, "poweroff") == 0)
@@ -146,6 +188,8 @@ static void shell_execute(const char *buf)
 		cmd_cat(buf + 4);
 	else if (strncmp(buf, "stat ", 5) == 0)
 		cmd_test_stat(buf + 5);
+	else if (strncmp(buf, "run ", 4) == 0)
+		cmd_run(buf + 4);
 	else if (buf[0] != '\0')
 		printf("unknown\n");
 }

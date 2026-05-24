@@ -205,21 +205,32 @@ copy_kernel_mappings(uint32_t *new_pdir)
 
 #define USER_STACK_TOP 0xC0000000
 #define USER_STACK_SIZE 0x1000
+#define MAX_EXEC_ARGS 16
+#define MAX_EXEC_ENVS 16
+#define MAX_EXEC_STRINGS 4096
 
 int
-sys_exec(const char *path)
+sys_exec(const char *path, char **argv, char **envp)
 {
 	struct task *current = scheduler_get_current();
 	struct vfs_inode *ino;
 	uint32_t file_size, num_pages;
-	uint8_t *elf_buf;
+	uint8_t *elf_buf, *str_buf;
 	const struct elf32_ehdr *ehdr;
 	uint32_t entry;
 	uint32_t *new_pdir;
 	uint32_t va, user_esp, old_cr3;
 	uint32_t stack_va;
 	int cr3_saved = 0;
+	int argc = 0, envc = 0;
 	int i;
+	uint32_t str_offset;
+	uint32_t argv_offsets[MAX_EXEC_ARGS];
+	uint32_t envp_offsets[MAX_EXEC_ENVS];
+	uint32_t total_size;
+	uint8_t *strings;
+	uint32_t *arr;
+	uint32_t fp;
 
 	if (!current)
 		return -1;
@@ -270,6 +281,52 @@ sys_exec(const char *path)
 		}
 	}
 
+	/*
+	 * Copy argv/envp strings from user space to a kernel page
+	 * BEFORE switching to the new pdir (user addresses become
+	 * inaccessible after the switch).
+	 */
+	str_buf = (uint8_t *)mm_frame_alloc();
+	if (!str_buf)
+		goto fail;
+
+	str_offset = 0;
+
+	if (argv) {
+		for (argc = 0; argc < MAX_EXEC_ARGS; argc++) {
+			char *s = argv[argc];
+			if (!s)
+				break;
+			int len = 0;
+			while (s[len] && len < MAX_EXEC_STRINGS
+			       - str_offset - 1)
+				len++;
+			if (str_offset + len + 1 > MAX_EXEC_STRINGS)
+				break;
+			argv_offsets[argc] = str_offset;
+			memcpy(str_buf + str_offset, s, len + 1);
+			str_offset += len + 1;
+		}
+	}
+
+	if (envp) {
+		for (envc = 0; envc < MAX_EXEC_ENVS; envc++) {
+			char *s = envp[envc];
+			if (!s)
+				break;
+			int len = 0;
+			while (s[len] && len < MAX_EXEC_STRINGS
+			       - str_offset - 1)
+				len++;
+			if (str_offset + len + 1 > MAX_EXEC_STRINGS)
+				break;
+			envp_offsets[envc] = str_offset;
+			memcpy(str_buf + str_offset, s, len + 1);
+			str_offset += len + 1;
+		}
+	}
+
+	/* Switch to new pdir and copy ELF segments */
 	asm volatile("mov %%cr3, %0" : "=r"(old_cr3));
 	cr3_saved = 1;
 	asm volatile("mov %0, %%cr3" :: "r"(new_pdir));
@@ -279,19 +336,45 @@ sys_exec(const char *path)
 	current->brk_start = elf_brk_start(ehdr);
 	current->program_break = current->brk_start;
 
+	/* Free ELF buffer pages */
 	for (i = 0; i < (int)num_pages; i++)
 		mm_frame_free((void *)((uint32_t)elf_buf + i * 0x1000));
 
-	user_esp = USER_STACK_TOP;
-	user_esp -= 4;
-	*(uint32_t *)user_esp = 0;
+	/*
+	 * Build user stack (Linux i386 ABI).
+	 * Layout (low to high address):
+	 *   argc (4 bytes)
+	 *   argv[0..argc-1] + NULL terminator ((argc+1)*4 bytes)
+	 *   envp[0..envc-1] + NULL terminator ((envc+1)*4 bytes)
+	 *   string data (str_offset bytes)
+	 */
+	total_size = 4 + (argc + 1) * 4 + (envc + 1) * 4 + str_offset;
+	user_esp = USER_STACK_TOP - total_size;
 
-	uint32_t fp;
+	strings = (uint8_t *)(user_esp + 4 + (argc + 1) * 4
+			      + (envc + 1) * 4);
+	memcpy(strings, str_buf, str_offset);
+
+	arr = (uint32_t *)(user_esp + 4);
+	for (i = 0; i < argc; i++)
+		arr[i] = (uint32_t)(strings + argv_offsets[i]);
+	arr[argc] = 0;
+
+	arr = (uint32_t *)(user_esp + 4 + (argc + 1) * 4);
+	for (i = 0; i < envc; i++)
+		arr[i] = (uint32_t)(strings + envp_offsets[i]);
+	arr[envc] = 0;
+
+	*(uint32_t *)user_esp = (uint32_t)argc;
+
+	mm_frame_free(str_buf);
+
 	asm volatile("movl %%ebp, %0" : "=r"(fp));
 	*(uint32_t *)(fp + 20) = entry;
 	*(uint32_t *)(fp + 32) = user_esp;
 
 	current->pdir = new_pdir;
+	task_set_pdir(current, new_pdir);
 	return 0;
 
 fail:

@@ -49,8 +49,12 @@ prepare_basic_disk() {
 	debugfs -w .part.img -R "rmdir /lost+found" 2>/dev/null
 	debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
 	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
+	local hello_elf="${TESTS_DIR}/../shell/hello.elf"
 	debugfs -w .part.img -R "write $shell_bin /bin/shell" 2>/dev/null
 	debugfs -w .part.img -R "write $init_bin /bin/init" 2>/dev/null
+	if [ -f "$hello_elf" ]; then
+		debugfs -w .part.img -R "write $hello_elf /bin/hello" 2>/dev/null
+	fi
 	dd if=/dev/zero of="$DISK_IMG" bs=1M count=32 2>/dev/null
 	printf '2048,,L,*\n' | sfdisk "$DISK_IMG" 2>/dev/null
 	dd if=.part.img of="$DISK_IMG" bs=512 seek=2048 conv=notrunc 2>/dev/null
@@ -175,7 +179,7 @@ vga_text() {
 
 vga_contains() {
 	local pattern="$1"
-	vga_text | grep -q "$pattern"
+	vga_text | grep -F -q "$pattern"
 }
 
 send_keys() {

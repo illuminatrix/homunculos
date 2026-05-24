@@ -51,7 +51,13 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 		child->fd_table[i] = parent->fd_table[i];
 
 	child->parent_pid = parent->pid;
-	child->pdir = parent->pdir;
+	if (parent->is_user && parent->pdir != kernel_pdir) {
+		child->pdir = mm_clone_pdir(parent->pdir);
+		if (!child->pdir)
+			return 0;
+	} else {
+		child->pdir = parent->pdir;
+	}
 	child->is_user = parent->is_user;
 	child->brk_start = parent->brk_start;
 	child->program_break = parent->program_break;

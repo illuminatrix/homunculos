@@ -89,6 +89,18 @@ All structs are fully defined in `.h` files (no opaque structs). No dynamic allo
 - TSS.ESP0 updated per-task in `schedule()` when switching to a user task
 - `task_init_user_context()` sets up user stack + iretl frame (SS, ESP, EFLAGS, CS, EIP) for ring 3 entry via `context_restore_user` (which uses `iretl`)
 
+### Important: fork() + user stack isolation
+
+ELF-loaded user tasks MUST have their page directory cloned on fork (`mm_clone_pdir`)
+so the child gets its own copy of user pages (including the user stack). Without this,
+the child overwrites the parent's stack variables (e.g., overwriting the fork return
+value `pid` from 3 to 0), causing the parent to misbehave after the child exits.
+
+`task_fork` in `kernel/task.c` calls `mm_clone_pdir` for `is_user` tasks. `mm_clone_pdir`
+in `arch/i386/mm.c` shares kernel identity page tables (first 4 PDEs, 0-16MB) and
+deep-copies only user page table entries (PDE index >= 4). Each user page frame is
+allocated and copied via `memcpy`.
+
 ### Interrupt Model
 
 - IDT: 255 entries, 32-bit interrupt gates (type=0xE), seg_sel=0x08
@@ -112,7 +124,7 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 4 | SYS_write | `sys_write` | `int sys_write(int fd, const void *buf, size_t len)` |
 | 5 | SYS_open | `sys_open` | `int sys_open(const char *path, int flags)` |
 | 6 | SYS_close | `sys_close` | `int sys_close(int fd)` |
-| 7 | SYS_waitpid | `sys_join` | `int sys_join(void)` |
+| 7 | SYS_waitpid | `sys_waitpid` | `int sys_waitpid(int pid, int *status, int options)` |
 | 11 | SYS_execve | `sys_exec` | `int sys_exec(const void *elf_buf)` |
 | 19 | SYS_lseek | `sys_lseek` | `int sys_lseek(int fd, int offset, int whence)` |
 | 20 | SYS_getpid | `sys_getpid` | `int sys_getpid(void)` |
@@ -135,7 +147,7 @@ Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.
 
 `sys_exec` validates and loads an ELF32 binary, creates a new page directory with user mappings, and overwrites the current task's iretl frame with the ELF entry point. ELF loading is implemented in `kernel/elf.c` (validate, load segments, copy content).
 
-`sys_join` blocks until a child task exits, then returns the child PID.
+`sys_waitpid` blocks until a child task exits, then returns the child PID. Currently ignores the `pid` and `options` parameters.
 
 ### Task / Scheduler
 

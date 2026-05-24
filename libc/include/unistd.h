@@ -17,6 +17,8 @@ int read(int, void *, size_t);
 int open(const char *, int);
 int close(int);
 int exec(const char *);
+int execv(const char *, char *const *);
+int execve(const char *, char *const *, char *const *);
 int waitpid(int, int *);
 int mount(const char *, const char *, const char *);
 int unmount(const char *);

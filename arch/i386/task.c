@@ -83,6 +83,11 @@ void task_init_fork_context(struct task *child, uint32_t fork_esp, uint32_t fork
 	child->context->pdir = (uint32_t)child->pdir;
 }
 
+void task_set_pdir(struct task *t, uint32_t *pdir)
+{
+	t->context->pdir = (uint32_t)pdir;
+}
+
 void task_update_context_user(struct task *t, uint32_t entry,
 			      uint32_t user_esp_top)
 {

@@ -33,7 +33,7 @@ Once the shell prompt (`>`) appears, you can type:
 | `cat <file>` | Print file contents to screen |
 | `greeting` | Print "hello" (tests syscall read/write from ring 3) |
 | `echo <text>` | Echo typed characters back (tests per-char I/O loop) |
-| `run` | Fork and exec an ELF binary (`hello.elf`), child prints "Hello, World!", parent prints "child N done" |
+| `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
 
 Filesystem layout

@@ -50,8 +50,8 @@ Build (on Linux host, not in-kernel):
 [ ] waitpid options   -- currently ignores pid, WNOHANG, etc.
     Support pid==-1, pid==child_pid, WNOHANG.  kernel/task.c
 
-[ ] exec with argv/envp   -- currently takes path only.
-    Toybox needs argv (command name lookup, flags).
+[x] exec with argv/envp   -- SYS_execve with argv/envp via sys_exec.
+    Test: `run /bin/hello` prints "hello from exec".  kernel/syscall.c
 
 ===== P2: VFS / Filesystem Improvements =====
 

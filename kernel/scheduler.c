@@ -42,6 +42,11 @@ void scheduler_tick(void) {
 static void move_to_tail(struct task *t) {
 	if (!run_queue_head || !t || run_queue_head == run_queue_tail)
 		return;
+
+	/* Already at tail — nothing to do */
+	if (t == run_queue_tail)
+		return;
+
 	if (run_queue_head == t) {
 		/* t is the head, simple detach */
 		run_queue_head = t->next;
@@ -54,8 +59,7 @@ static void move_to_tail(struct task *t) {
 			return;
 		prev->next = t->next;
 	}
-	if (t == run_queue_tail)
-		return;
+
 	t->next = 0;
 	run_queue_tail->next = t;
 	run_queue_tail = t;
@@ -81,7 +85,6 @@ void schedule(void) {
 
 	if (!next)
 		return;
-
 	if (next == prev)
 		return;
 
