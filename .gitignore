@@ -10,3 +10,4 @@ qemu.log
 disk.img
 kernel.lst
 qemu-monitor.sock
+tests/ext2-disk.img
