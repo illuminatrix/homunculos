@@ -25,6 +25,8 @@ int reboot(void);
 int getpid(void);
 int getppid(void);
 int lseek(int, int, int);
+int brk(void *);
+void *sbrk(int);
 void exit(int);
 
 #ifdef __cplusplus

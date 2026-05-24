@@ -48,5 +48,6 @@ int elf_validate(const struct elf32_ehdr *ehdr);
 int elf_load(const struct elf32_ehdr *ehdr, uint32_t *new_pdir,
 	     uint32_t *entry_out);
 void elf_copy_segments(const struct elf32_ehdr *ehdr);
+uint32_t elf_brk_start(const struct elf32_ehdr *ehdr);
 
 #endif

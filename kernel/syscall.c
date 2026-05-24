@@ -276,6 +276,9 @@ sys_exec(const char *path)
 
 	elf_copy_segments(ehdr);
 
+	current->brk_start = elf_brk_start(ehdr);
+	current->program_break = current->brk_start;
+
 	for (i = 0; i < (int)num_pages; i++)
 		mm_frame_free((void *)((uint32_t)elf_buf + i * 0x1000));
 
@@ -434,6 +437,38 @@ sys_uname(struct sys_utsname *buf)
 }
 
 int
+sys_brk(void *addr)
+{
+	struct task *current = scheduler_get_current();
+	uint32_t new_brk;
+
+	if (!current)
+		return -1;
+
+	if (addr == 0)
+		return current->program_break;
+
+	new_brk = (uint32_t)addr;
+	if (new_brk < current->brk_start)
+		new_brk = current->brk_start;
+
+	/* Expand heap if crossing a page boundary */
+	uint32_t old_page = (current->program_break + 0xFFF) & ~0xFFF;
+	uint32_t new_page = (new_brk + 0xFFF) & ~0xFFF;
+
+	if (new_page > old_page) {
+		for (uint32_t va = old_page; va < new_page; va += 0x1000) {
+			if (!mm_alloc_at(current->pdir, va,
+					 MM_PRESENT | MM_RW | MM_USER))
+				return current->program_break;
+		}
+	}
+
+	current->program_break = new_brk;
+	return new_brk;
+}
+
+int
 sys_lseek(int fd, int offset, int whence)
 {
 	struct task *current = scheduler_get_current();
@@ -485,4 +520,5 @@ syscall_init(void)
 	systemcall_table[SYS_getppid]     = (uint32_t)sys_getppid;
 	systemcall_table[SYS_uname]      = (uint32_t)sys_uname;
 	systemcall_table[SYS_lseek]      = (uint32_t)sys_lseek;
+	systemcall_table[SYS_brk]       = (uint32_t)sys_brk;
 }

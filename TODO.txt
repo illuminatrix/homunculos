@@ -9,7 +9,7 @@ Build (on Linux host, not in-kernel):
 
 ===== P0: Blocking (most commands fail without these) =====
 
-[ ] brk/sbrk   -- per-task heap via syscall.     kernel/syscall.c
+[x] brk/sbrk   -- per-task heap via syscall.     kernel/syscall.c
     Need a writable region in the page directory, task-local break addr.
 
 [ ] stat/fstat/lstat   -- SYS_stat (106), SYS_fstat (108), SYS_lstat (107)

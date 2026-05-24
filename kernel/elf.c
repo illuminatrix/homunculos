@@ -63,6 +63,23 @@ elf_load(const struct elf32_ehdr *ehdr, uint32_t *new_pdir,
 	return 0;
 }
 
+uint32_t
+elf_brk_start(const struct elf32_ehdr *ehdr)
+{
+	struct elf32_phdr *phdr = (struct elf32_phdr *)
+		((uint32_t)ehdr + ehdr->e_phoff);
+	uint32_t top = 0;
+
+	for (int i = 0; i < ehdr->e_phnum; i++) {
+		if (phdr[i].p_type != PT_LOAD)
+			continue;
+		uint32_t end = phdr[i].p_vaddr + phdr[i].p_memsz;
+		if (end > top)
+			top = end;
+	}
+	return (top + 0xFFF) & ~0xFFF;
+}
+
 void
 elf_copy_segments(const struct elf32_ehdr *ehdr)
 {

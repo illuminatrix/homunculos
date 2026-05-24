@@ -116,6 +116,7 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 11 | SYS_execve | `sys_exec` | `int sys_exec(const void *elf_buf)` |
 | 19 | SYS_lseek | `sys_lseek` | `int sys_lseek(int fd, int offset, int whence)` |
 | 20 | SYS_getpid | `sys_getpid` | `int sys_getpid(void)` |
+| 45 | SYS_brk | `sys_brk` | `int sys_brk(void *addr)` |
 | 21 | SYS_mount | `sys_mount` | `int sys_mount(const char *source, const char *target, const char *fstype)` |
 | 22 | SYS_umount | `sys_unmount` | `int sys_unmount(const char *target)` |
 | 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |

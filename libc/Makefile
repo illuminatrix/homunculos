@@ -27,6 +27,7 @@ unistd/getpid.o \
 unistd/getppid.o \
 unistd/uname.o \
 unistd/lseek.o \
+unistd/brk.o \
 
 OBJS:=\
 $(FREEOBJS) \

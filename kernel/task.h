@@ -29,6 +29,8 @@ struct task {
 	struct file *fd_table[VFS_MAX_FD];
 	uint32_t *pdir;
 	int is_user;
+	uint32_t brk_start;
+	uint32_t program_break;
 };
 
 struct task *task_alloc(void);

@@ -25,6 +25,8 @@ struct task *task_alloc(void)
 	t->next = 0;
 	t->pdir = kernel_pdir;
 	t->is_user = 0;
+	t->brk_start = 0;
+	t->program_break = 0;
 	next_pid++;
 
 	return t;
@@ -51,6 +53,8 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	child->parent_pid = parent->pid;
 	child->pdir = parent->pdir;
 	child->is_user = parent->is_user;
+	child->brk_start = parent->brk_start;
+	child->program_break = parent->program_break;
 
 	/*
 	 * Copy parent's stack data below the int $0x80 frame to child.
