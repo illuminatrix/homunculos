@@ -13,6 +13,7 @@
 #include "block.h"
 #include "ext2.h"
 #include "tmpfs.h"
+#include <dirent.h>
 #include "drivers/hello/hello.h"
 
 uint32_t systemcall_table[255];
@@ -633,6 +634,54 @@ sys_fstat(int fd, struct vfs_stat *buf)
 	return 0;
 }
 
+int
+sys_getdents(int fd, struct dirent *dirp, int count)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+	struct vfs_inode *inode;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+	if (!dirp || count <= 0)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	inode = (struct vfs_inode *)f->private_data;
+	if (!inode || !inode->ops || !inode->ops->readdir)
+		return -1;
+
+	int written = 0;
+	int idx = 0;
+	struct vfs_dirent dent;
+
+	while (inode->ops->readdir(inode, idx++, &dent) == 0) {
+		int namelen = strlen(dent.d_name);
+		int reclen = sizeof(struct dirent) + namelen + 2;
+
+		if (written + reclen > count)
+			break;
+
+		struct dirent *d = (struct dirent *)
+					((char *)dirp + written);
+		d->d_ino = dent.d_ino;
+		d->d_off = 0;
+		d->d_reclen = reclen;
+		memcpy(d->d_name, dent.d_name, namelen + 1);
+		/* d_type at d_reclen - 1 */
+		*((char *)d + reclen - 1) = dent.d_type;
+
+		written += reclen;
+	}
+
+	return written;
+}
+
 void
 syscall_init(void)
 {
@@ -656,4 +705,5 @@ syscall_init(void)
 	systemcall_table[SYS_stat]      = (uint32_t)sys_stat;
 	systemcall_table[SYS_lstat]     = (uint32_t)sys_lstat;
 	systemcall_table[SYS_fstat]     = (uint32_t)sys_fstat;
+	systemcall_table[SYS_getdents] = (uint32_t)sys_getdents;
 }

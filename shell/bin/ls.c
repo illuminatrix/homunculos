@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <dirent.h>
 
 void _start(void)
 {
@@ -22,12 +23,23 @@ void _start(void)
 		printf("open failed\n");
 		exit(1);
 	}
-	char buf[128];
-	int n = read(fd, buf, sizeof(buf) - 1);
-	if (n < 0)
-		n = 0;
-	buf[n] = '\0';
-	printf("%s\n", buf);
+
+	char buf[256];
+	int n = getdents(fd, (struct dirent *)buf, sizeof(buf));
+	if (n < 0) {
+		printf("getdents failed\n");
+		close(fd);
+		exit(1);
+	}
+
+	int pos = 0;
+	while (pos < n) {
+		struct dirent *d = (struct dirent *)(buf + pos);
+		printf("%s ", d->d_name);
+		pos += d->d_reclen;
+	}
+	printf("\n");
+
 	close(fd);
 	exit(0);
 }

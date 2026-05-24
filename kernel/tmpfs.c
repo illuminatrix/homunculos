@@ -30,6 +30,8 @@ static int tmpfs_readdir(struct vfs_inode *dir, uint32_t index,
 		return -1;
 
 	dent->d_ino = td->entries[index].inode->i_no;
+	dent->d_type = (td->entries[index].inode->i_type == VFS_IDIR)
+			? 4 : 8;
 	strncpy(dent->d_name, td->entries[index].name,
 		sizeof(dent->d_name) - 1);
 	dent->d_name[sizeof(dent->d_name) - 1] = '\0';

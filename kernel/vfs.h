@@ -57,6 +57,7 @@ struct vfs_stat {
 struct vfs_dirent {
 	uint32_t d_ino;
 	char d_name[64];
+	uint8_t d_type;
 };
 
 struct vfs_inode;

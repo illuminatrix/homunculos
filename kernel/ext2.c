@@ -305,6 +305,7 @@ static int ext2_readdir(struct vfs_inode *dir, uint32_t index,
 				if (name_len > 63)
 					name_len = 63;
 				dent->d_ino = de->inode;
+				dent->d_type = (de->file_type == 2) ? 4 : 8;
 				memcpy(dent->d_name, de->name, name_len);
 				dent->d_name[name_len] = '\0';
 				return 0;

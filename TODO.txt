@@ -16,7 +16,7 @@ Build (on Linux host, not in-kernel):
     Define struct stat (i386), expose inode metadata (size, type, mtime)
     through VFS inode ops.  syscall.c
 
-[ ] getdents64   -- SYS_getdents64 (220)
+[x] getdents (i386 SYS_getdents=141)   -- SYS_getdents64 (220)
     Directory read returns space-separated names via read(fd); toybox
     expects struct linux_dirent64.  Need a real getdents syscall that
     iterates vfs_inode_ops->readdir.  kernel/syscall.c + vfs

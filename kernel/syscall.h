@@ -22,5 +22,6 @@
 #define SYS_lstat     107
 #define SYS_fstat     108
 #define SYS_uname    122
+#define SYS_getdents  141
 
 #endif
