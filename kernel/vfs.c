@@ -26,10 +26,12 @@ static struct vfs_inode *vfs_root;
 
 static int vfs_file_read(struct file *f, void *buf, size_t nbyte);
 static int vfs_file_write(struct file *f, const void *buf, size_t nbyte);
+static int vfs_file_ioctl(struct file *f, int cmd, void *arg);
 
 static struct vfs_ops vfs_file_ops = {
 	.read  = vfs_file_read,
 	.write = vfs_file_write,
+	.ioctl = vfs_file_ioctl,
 };
 
 void vfs_inode_init(void)
@@ -268,9 +270,22 @@ static int dev_inode_write(struct vfs_inode *inode, uint32_t offset,
 	return dev->ops->write(&f, buf, size);
 }
 
+static int dev_inode_ioctl(struct vfs_inode *inode, int cmd, void *arg)
+{
+	struct vfs_device *dev = (struct vfs_device *)inode->private_data;
+	struct file f;
+	if (!dev->ops->ioctl)
+		return -1;
+	f.ops = dev->ops;
+	f.private_data = dev->private_data;
+	f.pos = 0;
+	return dev->ops->ioctl(&f, cmd, arg);
+}
+
 static struct vfs_inode_ops vfs_dev_inode_ops = {
 	.read      = dev_inode_read,
 	.write     = dev_inode_write,
+	.ioctl     = dev_inode_ioctl,
 	.readdir   = 0,
 	.lookup    = 0,
 	.add_entry = 0,
@@ -409,4 +424,12 @@ static int vfs_file_write(struct file *f, const void *buf, size_t nbyte)
 	if (ret > 0)
 		f->pos += ret;
 	return ret;
+}
+
+static int vfs_file_ioctl(struct file *f, int cmd, void *arg)
+{
+	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
+	if (!inode || !inode->ops || !inode->ops->ioctl)
+		return -1;
+	return inode->ops->ioctl(inode, cmd, arg);
 }

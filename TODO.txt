@@ -21,7 +21,7 @@ Build (on Linux host, not in-kernel):
     expects struct linux_dirent64.  Need a real getdents syscall that
     iterates vfs_inode_ops->readdir.  kernel/syscall.c + vfs
 
-[ ] ioctl    -- SYS_ioctl (54)
+[x] ioctl    -- SYS_ioctl (54)
     At minimum TCGETS/TCSETS for terminal control (echo, line buffering,
     signal chars).  VGA text driver and PS/2 kbd driver need ioctl
     handlers.

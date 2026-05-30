@@ -15,6 +15,7 @@
 #include "tmpfs.h"
 #include <dirent.h>
 #include "drivers/hello/hello.h"
+#include "termios.h"
 
 uint32_t systemcall_table[255];
 
@@ -803,6 +804,27 @@ sys_getdents(int fd, struct dirent *dirp, int count)
 	return written;
 }
 
+int
+sys_ioctl(int fd, int cmd, void *arg)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f || !f->ops)
+		return -1;
+
+	if (!f->ops->ioctl)
+		return -1;
+
+	return f->ops->ioctl(f, cmd, arg);
+}
+
 void
 syscall_init(void)
 {
@@ -829,4 +851,5 @@ syscall_init(void)
 	systemcall_table[SYS_getdents] = (uint32_t)sys_getdents;
 	systemcall_table[SYS_chdir]   = (uint32_t)sys_chdir;
 	systemcall_table[SYS_getcwd]  = (uint32_t)sys_getcwd;
+	systemcall_table[SYS_ioctl]   = (uint32_t)sys_ioctl;
 }

@@ -25,5 +25,6 @@
 #define SYS_uname    122
 #define SYS_getdents  141
 #define SYS_getcwd   183
+#define SYS_ioctl     54
 
 #endif

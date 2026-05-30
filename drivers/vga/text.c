@@ -1,5 +1,6 @@
 #include "vfs.h"
 #include "pio.h"
+#include "termios.h"
 #include <string.h>
 
 #define VGA_WIDTH  80
@@ -23,12 +24,16 @@ static struct vga_cursor vga_cursor;
 static struct vga_file_priv stdout_priv;
 static struct vga_file_priv stderr_priv;
 
+struct termios tty_termios;
+
 static int vga_text_write(struct file *file, const void *buf, size_t nbyte);
+static int vga_ioctl(struct file *file, int cmd, void *arg);
 static void vga_update_cursor(struct vga_cursor *cursor);
 
 static struct vfs_ops vga_ops = {
 	.write = vga_text_write,
 	.read  = NULL,
+	.ioctl = vga_ioctl,
 };
 
 static void vga_update_cursor(struct vga_cursor *cursor)
@@ -94,6 +99,23 @@ static int vga_text_write(struct file *file, const void *buf, size_t nbyte)
 	return written;
 }
 
+static int vga_ioctl(struct file *file, int cmd, void *arg)
+{
+	(void)file;
+	switch (cmd) {
+	case TCGETS:
+		memcpy(arg, &tty_termios, sizeof(tty_termios));
+		return 0;
+	case TCSETS:
+	case TCSETSW:
+	case TCSETSF:
+		memcpy(&tty_termios, arg, sizeof(tty_termios));
+		return 0;
+	default:
+		return -1;
+	}
+}
+
 static void vga_text_clear(void)
 {
 	uint16_t blank = ' ' | (0x0F << 8);
@@ -105,6 +127,12 @@ static void vga_text_clear(void)
 static void vga_text_init(void)
 {
 	vga_text_clear();
+
+	memset(&tty_termios, 0, sizeof(tty_termios));
+	tty_termios.c_lflag = ECHO | ICANON;
+	tty_termios.c_oflag = 0;
+	tty_termios.c_cflag = 0;
+	tty_termios.c_iflag = ICRNL;
 
 	vga_cursor.x = 0;
 	vga_cursor.y = 0;

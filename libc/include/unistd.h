@@ -32,6 +32,7 @@ void *sbrk(int);
 void exit(int);
 int chdir(const char *);
 int getcwd(char *, size_t);
+int ioctl(int, int, void *);
 
 #ifdef __cplusplus
 }

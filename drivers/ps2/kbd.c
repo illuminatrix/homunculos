@@ -2,6 +2,8 @@
 #include "irq.h"
 #include "pio.h"
 #include "interrupt.h"
+#include "termios.h"
+#include <string.h>
 
 #define KBD_BUFFER_SIZE 256
 
@@ -155,9 +157,27 @@ static int kbd_read(struct file *file, void *buf, size_t nbyte)
 	return (int)i;
 }
 
+static int kbd_ioctl(struct file *file, int cmd, void *arg)
+{
+	(void)file;
+	switch (cmd) {
+	case TCGETS:
+		memcpy(arg, &tty_termios, sizeof(tty_termios));
+		return 0;
+	case TCSETS:
+	case TCSETSW:
+	case TCSETSF:
+		memcpy(&tty_termios, arg, sizeof(tty_termios));
+		return 0;
+	default:
+		return -1;
+	}
+}
+
 static struct vfs_ops kbd_ops = {
 	.write = NULL,
 	.read  = kbd_read,
+	.ioctl = kbd_ioctl,
 };
 
 static int ps2_wait_read(void)

@@ -14,6 +14,7 @@ struct file;
 struct vfs_ops {
 	int (*write)(struct file *file, const void *buf, size_t nbyte);
 	int (*read)(struct file *file, void *buf, size_t nbyte);
+	int (*ioctl)(struct file *file, int cmd, void *arg);
 };
 
 struct file {
@@ -72,6 +73,7 @@ struct vfs_inode_ops {
 				    const char *name);
 	int (*add_entry)(struct vfs_inode *dir, const char *name,
 			 struct vfs_inode *entry);
+	int (*ioctl)(struct vfs_inode *inode, int cmd, void *arg);
 };
 
 struct vfs_inode {
