@@ -49,8 +49,11 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	strncpy(child->name, parent->name, TASK_NAME_LEN - 1);
 	child->name[TASK_NAME_LEN - 1] = '\0';
 
-	for (i = 0; i < VFS_MAX_FD; i++)
+	for (i = 0; i < VFS_MAX_FD; i++) {
 		child->fd_table[i] = parent->fd_table[i];
+		if (child->fd_table[i])
+			child->fd_table[i]->refcount++;
+	}
 
 	child->parent_pid = parent->pid;
 	if (parent->is_user && parent->pdir != kernel_pdir) {

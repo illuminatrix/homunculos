@@ -32,6 +32,7 @@ static struct vfs_ops vfs_file_ops = {
 	.read  = vfs_file_read,
 	.write = vfs_file_write,
 	.ioctl = vfs_file_ioctl,
+	.close = 0,
 };
 
 void vfs_inode_init(void)
@@ -321,6 +322,21 @@ void vfs_create_device_nodes(void)
 	}
 }
 
+struct file *vfs_alloc_file(void)
+{
+	int i;
+	for (i = 0; i < VFS_MAX_OPEN_FILES; i++) {
+		if (vfs_open_files[i].ops == 0) {
+			vfs_open_files[i].ops = 0;
+			vfs_open_files[i].private_data = 0;
+			vfs_open_files[i].pos = 0;
+			vfs_open_files[i].refcount = 1;
+			return &vfs_open_files[i];
+		}
+	}
+	return 0;
+}
+
 struct file *vfs_open_file(struct vfs_inode *inode)
 {
 	int i;
@@ -331,6 +347,7 @@ struct file *vfs_open_file(struct vfs_inode *inode)
 			vfs_open_files[i].ops = &vfs_file_ops;
 			vfs_open_files[i].private_data = inode;
 			vfs_open_files[i].pos = 0;
+			vfs_open_files[i].refcount = 1;
 			return &vfs_open_files[i];
 		}
 	}
@@ -341,6 +358,11 @@ void vfs_close_file(struct file *f)
 {
 	if (!f)
 		return;
+	f->refcount--;
+	if (f->refcount > 0)
+		return;
+	if (f->ops && f->ops->close)
+		f->ops->close(f);
 	f->ops = 0;
 	f->private_data = 0;
 	f->pos = 0;

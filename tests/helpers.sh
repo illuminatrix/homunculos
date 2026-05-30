@@ -197,6 +197,7 @@ send_keys() {
 			_)     key_name="shift-minus" ;;
 			=)     key_name="equal" ;;
 			+)     key_name="shift-equal" ;;
+			"|")   key_name="shift-backslash" ;;
 			/)     key_name="slash" ;;
 			.)     key_name="dot" ;;
 			,)     key_name="comma" ;;

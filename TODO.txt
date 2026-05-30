@@ -41,11 +41,12 @@ Build (on Linux host, not in-kernel):
 
 ===== P1: Pipeline / Shell (for a usable shell) =====
 
-[ ] pipe    -- SYS_pipe (42) / SYS_pipe2 (331)
-    Need a tmpfs-backed pipe buffer, returns two fds.
+[x] pipe    -- SYS_pipe (42)
+    Circular buffer, blocking read/write, per-pipe static pool.
+    See kernel/pipe.c, drivers/pipe/ (sys_pipe + sys_dup2).
 
-[ ] dup/dup2   -- SYS_dup (32), SYS_dup2 (99)
-    Copy fd table entries.  Needed for redirection.
+[x] dup2   -- SYS_dup2 (63)
+    fd table copy via refcounted file structs.  Needed for pipe redirection.
 
 [ ] waitpid options   -- currently ignores pid, WNOHANG, etc.
     Support pid==-1, pid==child_pid, WNOHANG.  kernel/task.c

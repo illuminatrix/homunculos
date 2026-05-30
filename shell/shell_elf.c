@@ -4,6 +4,7 @@
 
 #define SHELL_BUF_SIZE 64
 #define CMD_ARGS_MAX 8
+#define CMD_SEGMENTS_MAX 8
 
 static void shell_prompt(void)
 {
@@ -38,13 +39,12 @@ static int shell_readline(char *buf, int size)
 	}
 }
 
-static void shell_execute(char *buf)
+static int parse_args(char *buf, char *argv[], int max_args)
 {
-	char *argv[CMD_ARGS_MAX];
 	int argc = 0;
-
 	char *p = buf;
-	while (*p && argc < CMD_ARGS_MAX - 1) {
+
+	while (*p && argc < max_args - 1) {
 		while (*p == ' ') p++;
 		if (!*p) break;
 		argv[argc++] = p;
@@ -52,39 +52,132 @@ static void shell_execute(char *buf)
 		if (*p) *p++ = '\0';
 	}
 	argv[argc] = 0;
+	return argc;
+}
 
-	if (argc == 0)
-		return;
+static int exec_command(char *argv[])
+{
+	char path[SHELL_BUF_SIZE + 8];
 
-	if (strcmp(argv[0], "cd") == 0) {
-		const char *dir = "/";
-		if (argc > 1)
-			dir = argv[1];
-		if (chdir(dir) < 0)
-			printf("cd: %s: failed\n", dir);
-		return;
+	if (argv[0][0] == '/') {
+		execv(argv[0], argv);
+	} else {
+		strcpy(path, "/bin/");
+		strcpy(path + 5, argv[0]);
+		execv(path, argv);
 	}
+	printf("%s: not found\n", argv[0]);
+	exit(1);
+	return -1;
+}
 
-	int pid = fork();
-	if (pid < 0) {
-		printf("fork failed\n");
-		return;
-	}
+static void shell_execute(char *buf)
+{
+	/* Check for pipe character */
+	char *pipe_pos = 0;
+	char *p;
 
-	if (pid == 0) {
-		char path[SHELL_BUF_SIZE + 8];
-		if (argv[0][0] == '/') {
-			execv(argv[0], argv);
-		} else {
-			strcpy(path, "/bin/");
-			strcpy(path + 5, argv[0]);
-			execv(path, argv);
+	for (p = buf; *p; p++) {
+		if (*p == '|') {
+			pipe_pos = p;
+			break;
 		}
-		printf("%s: not found\n", argv[0]);
-		exit(1);
 	}
 
-	waitpid(pid, 0);
+	if (!pipe_pos) {
+		/* Single command */
+		char *argv[CMD_ARGS_MAX];
+		int argc = parse_args(buf, argv, CMD_ARGS_MAX);
+
+		if (argc == 0)
+			return;
+
+		if (strcmp(argv[0], "cd") == 0) {
+			const char *dir = "/";
+			if (argc > 1)
+				dir = argv[1];
+			if (chdir(dir) < 0)
+				printf("cd: %s: failed\n", dir);
+			return;
+		}
+
+		int pid = fork();
+		if (pid < 0) {
+			printf("fork failed\n");
+			return;
+		}
+
+		if (pid == 0)
+			exec_command(argv);
+
+		waitpid(pid, 0);
+		return;
+	}
+
+	/* Pipeline: split by | */
+	char *segments[CMD_SEGMENTS_MAX];
+	int nsegs = 0;
+	char *cur = buf;
+
+	segments[nsegs++] = cur;
+	for (p = cur; *p; p++) {
+		if (*p == '|') {
+			*p = '\0';
+			if (nsegs < CMD_SEGMENTS_MAX)
+				segments[nsegs++] = p + 1;
+		}
+	}
+
+	if (nsegs < 2) {
+		printf("invalid pipe\n");
+		return;
+	}
+
+	int prev_fd = -1;
+	int pids[CMD_SEGMENTS_MAX];
+	int i;
+
+	for (i = 0; i < nsegs; i++) {
+		char *argv[CMD_ARGS_MAX];
+		int argc = parse_args(segments[i], argv, CMD_ARGS_MAX);
+
+		if (argc == 0)
+			continue;
+
+		int pfd[2];
+		if (i < nsegs - 1)
+			pipe(pfd);
+
+		int pid = fork();
+		if (pid < 0) {
+			printf("fork failed\n");
+			return;
+		}
+
+		if (pid == 0) {
+			if (prev_fd != -1) {
+				dup2(prev_fd, 0);
+				close(prev_fd);
+			}
+			if (i < nsegs - 1) {
+				close(pfd[0]);
+				dup2(pfd[1], 1);
+				close(pfd[1]);
+			}
+			exec_command(argv);
+		}
+
+		if (prev_fd != -1)
+			close(prev_fd);
+		if (i < nsegs - 1) {
+			close(pfd[1]);
+			prev_fd = pfd[0];
+		}
+		pids[i] = pid;
+	}
+
+	for (i = 0; i < nsegs; i++)
+		waitpid(pids[i], 0);
 }
 
 void _start(void)

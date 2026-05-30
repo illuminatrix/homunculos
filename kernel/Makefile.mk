@@ -1,1 +1,1 @@
-OBJS += kernel/kernel.o kernel/panic.o kernel/pic.o kernel/irq.o kernel/syscall.o kernel/scheduler.o kernel/task.o kernel/vfs.o kernel/elf.o kernel/tmpfs.o kernel/block.o kernel/ext2.o kernel/part.o
+OBJS += kernel/kernel.o kernel/panic.o kernel/pic.o kernel/irq.o kernel/syscall.o kernel/scheduler.o kernel/task.o kernel/vfs.o kernel/elf.o kernel/tmpfs.o kernel/block.o kernel/ext2.o kernel/part.o kernel/pipe.o

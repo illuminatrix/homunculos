@@ -16,6 +16,8 @@
 #define SYS_mount      21
 #define SYS_umount     22
 #define SYS_sched_yield 24
+#define SYS_pipe      42
+#define SYS_dup2      63
 #define SYS_brk        45
 #define SYS_getppid    64
 #define SYS_reboot     88

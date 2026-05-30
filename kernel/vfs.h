@@ -15,12 +15,14 @@ struct vfs_ops {
 	int (*write)(struct file *file, const void *buf, size_t nbyte);
 	int (*read)(struct file *file, void *buf, size_t nbyte);
 	int (*ioctl)(struct file *file, int cmd, void *arg);
+	int (*close)(struct file *file);
 };
 
 struct file {
 	const struct vfs_ops *ops;
 	void *private_data;
 	uint32_t pos;
+	int refcount;
 };
 
 /* Driver init via linker section */
@@ -107,6 +109,7 @@ int vfs_register_device(const char *name, const struct vfs_ops *ops,
 			void *private_data);
 void vfs_create_device_nodes(void);
 struct file *vfs_open_file(struct vfs_inode *inode);
+struct file *vfs_alloc_file(void);
 void vfs_close_file(struct file *f);
 
 /* === Mount Abstraction === */

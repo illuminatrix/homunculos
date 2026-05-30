@@ -33,6 +33,8 @@ void exit(int);
 int chdir(const char *);
 int getcwd(char *, size_t);
 int ioctl(int, int, void *);
+int pipe(int[2]);
+int dup2(int, int);
 
 #ifdef __cplusplus
 }

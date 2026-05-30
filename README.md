@@ -35,6 +35,7 @@ Once the shell prompt (`>`) appears, you can type:
 | `echo <text>` | Echo typed characters back (tests per-char I/O loop) |
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
+| `cmd1 | cmd2` | Pipe output of cmd1 to input of cmd2 |
 
 Filesystem layout
 -----------------
@@ -73,7 +74,7 @@ Testing
 -------
 
 ```
-make test       # run all 9 integration tests
+make test       # run all integration tests
 ```
 
 Or run a single test:

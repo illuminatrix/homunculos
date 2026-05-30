@@ -13,6 +13,7 @@
 #include "block.h"
 #include "ext2.h"
 #include "tmpfs.h"
+#include "pipe.h"
 #include <dirent.h>
 #include "drivers/hello/hello.h"
 #include "termios.h"
@@ -153,8 +154,7 @@ sys_close(int fd)
 		return -1;
 	if (fd < 0 || fd >= VFS_MAX_FD)
 		return -1;
-	if (fd < 3)
-		return -1; /* don't close stdin/stdout/stderr */
+	/* Allow closing any fd (needed for pipe redirection) */
 
 	f = current->fd_table[fd];
 	if (!f)
@@ -195,6 +195,18 @@ sys_write(int fd, const void *buf, size_t len)
 int
 sys_exit(int status)
 {
+	struct task *current = scheduler_get_current();
+	int i;
+
+	if (current) {
+		for (i = 0; i < VFS_MAX_FD; i++) {
+			if (current->fd_table[i]) {
+				vfs_close_file(current->fd_table[i]);
+				current->fd_table[i] = 0;
+			}
+		}
+	}
+
 	task_set_exit_status(status);
 	task_exit();
 	return 0;
@@ -852,4 +864,6 @@ syscall_init(void)
 	systemcall_table[SYS_chdir]   = (uint32_t)sys_chdir;
 	systemcall_table[SYS_getcwd]  = (uint32_t)sys_getcwd;
 	systemcall_table[SYS_ioctl]   = (uint32_t)sys_ioctl;
+	systemcall_table[SYS_pipe]    = (uint32_t)sys_pipe;
+	systemcall_table[SYS_dup2]    = (uint32_t)sys_dup2;
 }

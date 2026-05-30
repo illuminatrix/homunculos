@@ -13,9 +13,17 @@ void _start(void)
 		: "memory"
 	);
 
+	char buf[128];
+	int n;
+
 	if (argc < 2) {
-		printf("usage: cat <file>\n");
-		exit(1);
+		/* Read from stdin */
+		n = read(0, buf, sizeof(buf) - 1);
+		if (n < 0)
+			n = 0;
+		buf[n] = '\0';
+		printf("%s\n", buf);
+		exit(0);
 	}
 
 	int fd = open(argv[1], 0);
@@ -23,8 +31,7 @@ void _start(void)
 		printf("open failed\n");
 		exit(1);
 	}
-	char buf[128];
-	int n = read(fd, buf, sizeof(buf) - 1);
+	n = read(fd, buf, sizeof(buf) - 1);
 	if (n < 0)
 		n = 0;
 	buf[n] = '\0';

@@ -10,7 +10,7 @@ CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 \
 
 IOCTL_TEST_BIN := $(TESTS_DIR)/ioctl_test.elf
 
-TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl
+TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
 
 .PHONY: all test $(TEST_SCRIPTS) clean
@@ -76,6 +76,9 @@ $(IOCTL_TEST_BIN): $(TESTS_DIR)/ioctl_test.c
 
 test-ioctl: $(KERNEL_BIN) $(IOCTL_TEST_BIN)
 	@$(TESTS_DIR)/test-ioctl.sh
+
+test-pipe: $(KERNEL_BIN)
+	@$(TESTS_DIR)/test-pipe.sh
 
 clean:
 	rm -f $(TESTS_DIR)/*.sock

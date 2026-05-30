@@ -35,6 +35,8 @@ unistd/getdents.o \
 unistd/chdir.o \
 unistd/getcwd.o \
 unistd/ioctl.o \
+unistd/pipe.o \
+unistd/dup2.o \
 
 OBJS:=\
 $(FREEOBJS) \
