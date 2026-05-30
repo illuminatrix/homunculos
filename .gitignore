@@ -11,6 +11,7 @@ disk.img
 kernel.lst
 qemu-monitor.sock
 tests/ext2-disk.img
+tests/*.elf
 shell/bin/*
 !shell/bin/*.c
 !shell/bin/Makefile.mk

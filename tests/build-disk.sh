@@ -29,6 +29,12 @@ if [ -f "$INIT_BIN" ]; then
 	debugfs -w .part.img -R "write $INIT_BIN /bin/init" 2>/dev/null
 fi
 
+# Test-only binary for pipe testing
+PIPETEST="${TESTS_DIR}/prepend.elf"
+if [ -f "$PIPETEST" ]; then
+	debugfs -w .part.img -R "write $PIPETEST /bin/prepend" 2>/dev/null
+fi
+
 # Command binaries
 for cmd in poweroff greeting uname ls cat stat hello pwd cd; do
 	src="${TESTS_DIR}/../shell/bin/$cmd"

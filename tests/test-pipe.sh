@@ -1,13 +1,13 @@
 #!/bin/bash
 # Test: Pipe support in shell
-# Tests that "greeting | cat" prints "hello"
+# Tests that "greeting | prepend" prints "PIPE:hello"
 source "$(dirname "$0")/helpers.sh"
 
-check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
+check_deps qemu-system-i386 socat || exit 1
 
 echo "=== Pipe Support Test ==="
 echo "  Subtest 1: Shell prompt appears"
-echo "  Subtest 2: 'greeting | cat' produces 'hello' output"
+echo "  Subtest 2: 'greeting | prepend' produces 'PIPE:hello' output"
 echo "  Subtest 3: 'poweroff' shuts down QEMU"
 
 qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
@@ -33,8 +33,8 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- Subtest 2: "greeting | cat" via pipe ---
-# Type "greeting | cat" using QEMU sendkey
+# --- Subtest 2: "greeting | prepend" via pipe ---
+# Type "greeting | prepend" using QEMU sendkey
 # '|' is shift-backslash on US keyboards
 for ch in g r e e t i n g; do
 	monitor_cmd "sendkey $ch" >/dev/null 2>&1
@@ -46,7 +46,7 @@ monitor_cmd "sendkey shift-backslash" >/dev/null 2>&1
 sleep 0.08
 monitor_cmd "sendkey spc" >/dev/null 2>&1
 sleep 0.08
-for ch in c a t; do
+for ch in p r e p e n d; do
 	monitor_cmd "sendkey $ch" >/dev/null 2>&1
 	sleep 0.08
 done
@@ -54,11 +54,11 @@ sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 2
 
-if vga_contains "hello"; then
-	pass "'greeting | cat' produced 'hello' output"
+if vga_contains "PIPE:hello"; then
+	pass "'greeting | prepend' produced 'PIPE:hello' output"
 else
 	vga_raw=$(vga_text | tail -c 200)
-	fail "'hello' not found after 'greeting | cat'. VGA tail: [$vga_raw]"
+	fail "'PIPE:hello' not found after 'greeting | prepend'. VGA tail: [$vga_raw]"
 	errors=$((errors + 1))
 fi
 

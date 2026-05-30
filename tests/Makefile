@@ -14,6 +14,7 @@ CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 \
 	  -I$(KERNEL_DIR)/libc/include -I$(KERNEL_DIR)/kernel -I$(KERNEL_DIR)/shell
 
 IOCTL_TEST_BIN := $(TESTS_DIR)/ioctl_test.elf
+PIPE_TEST_BIN := $(TESTS_DIR)/prepend.elf
 
 TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
@@ -27,7 +28,7 @@ $(KERNEL_BIN):
 	@echo "Building kernel..."
 	@$(MAKE) -C $(KERNEL_DIR) 2>&1
 
-$(DISK_IMG): $(KERNEL_BIN) $(SHELL_BIN) $(INIT_ELF) $(BIN_CMDS)
+$(DISK_IMG): $(KERNEL_BIN) $(SHELL_BIN) $(INIT_ELF) $(BIN_CMDS) $(PIPE_TEST_BIN)
 	@echo "Building shared disk image..."
 	@$(TESTS_DIR)/build-disk.sh
 
@@ -84,16 +85,25 @@ $(IOCTL_TEST_BIN): $(TESTS_DIR)/ioctl_test.c
 		$(KERNEL_DIR)/libc/unistd/*.o
 	@rm -f $@.o
 
+$(PIPE_TEST_BIN): $(TESTS_DIR)/prepend.c
+	@echo "CC  $<  ->  $@"
+	@$(CC) $(CFLAGS) -c -o $@.o $<
+	@echo "LD  $@.o ->  $@"
+	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $@.o \
+		$(KERNEL_DIR)/libc/stdio/*.o $(KERNEL_DIR)/libc/string/*.o \
+		$(KERNEL_DIR)/libc/unistd/*.o
+	@rm -f $@.o
+
 test-ioctl: $(KERNEL_BIN) $(IOCTL_TEST_BIN) $(DISK_IMG)
 	@$(TESTS_DIR)/test-ioctl.sh
 
-test-pipe: $(KERNEL_BIN) $(DISK_IMG)
+test-pipe: $(KERNEL_BIN) $(PIPE_TEST_BIN) $(DISK_IMG)
 	@$(TESTS_DIR)/test-pipe.sh
 
 clean:
 	rm -f $(TESTS_DIR)/*.sock
 	rm -f $(KERNEL_DIR)/serial.log
-	rm -f $(IOCTL_TEST_BIN)
+	rm -f $(IOCTL_TEST_BIN) $(PIPE_TEST_BIN)
 	rm -f $(DISK_IMG)
 
 .PHONY: clean
