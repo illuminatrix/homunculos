@@ -18,7 +18,6 @@ echo "  Subtest 3: 'greeting' still works (regression - fork+exec+waitpid)"
 echo "  Subtest 4: Ring 3 CS register (regression)"
 echo "  Subtest 5: 'poweroff' shuts down QEMU (regression)"
 
-prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
 qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
 errors=0

@@ -20,7 +20,6 @@ echo "  Subtest 4: Character echo while typing"
 echo "  Subtest 5: 'poweroff' via ring 3 syscall shuts down QEMU"
 echo "  Subtest 6: [INFO] Typematic suppression (structural, not QEMU-testable)"
 
-prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
 qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
 errors=0

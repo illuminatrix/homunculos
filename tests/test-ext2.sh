@@ -2,7 +2,7 @@
 # Test: ext2 filesystem mounted at root /, tmpfs at /dev
 source "$(dirname "$0")/helpers.sh"
 
-check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
+check_deps qemu-system-i386 socat || exit 1
 
 echo "=== ext2 Filesystem Test ==="
 echo "  Subtest 1: Boot welcome message"
@@ -13,52 +13,6 @@ echo "  Subtest 5: 'cat /hello.txt' shows file content"
 echo "  Subtest 6: 'poweroff' shuts down QEMU (regression)"
 
 errors=0
-
-# --- Create partitioned ext2 disk image with /bin/shell ---
-DISK_SIZE=32
-PART_START=2048
-rm -f "$DISK_IMG"
-
-# Create raw ext2 partition image with /dev, /bin and test files
-dd if=/dev/zero of=.part.img bs=1M count=31 2>/dev/null
-mkfs.ext2 -F -E revision=0 -b 1024 .part.img 2>/dev/null
-debugfs -w .part.img -R "rmdir /lost+found" 2>/dev/null
-
-debugfs -w .part.img -R "mkdir /dev" 2>/dev/null
-debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
-
-# Add shell binary
-debugfs -w .part.img -R "write ${TESTS_DIR}/../shell/shell /bin/shell" 2>/dev/null
-
-# Add init binary  
-debugfs -w .part.img -R "write ${TESTS_DIR}/../init/init /bin/init" 2>/dev/null
-
-# Add command binaries
-for cmd in poweroff greeting uname ls cat stat hello; do
-	src="${TESTS_DIR}/../shell/bin/$cmd"
-	if [ -f "$src" ]; then
-		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null
-	fi
-done
-
-# Create a temp file with known content
-TEST_CONTENT=$(mktemp)
-printf "Hello from ext2!" > "$TEST_CONTENT"
-
-# Populate partition with test files via debugfs
-debugfs -w .part.img -R "mkdir /testdir" 2>/dev/null
-debugfs -w .part.img -R "write $TEST_CONTENT /hello.txt" 2>/dev/null
-debugfs -w .part.img -R "mkdir /nested" 2>/dev/null
-debugfs -w .part.img -R "mkdir /nested/deep" 2>/dev/null
-printf "deep file" > "${TEST_CONTENT}2"
-debugfs -w .part.img -R "write ${TEST_CONTENT}2 /nested/deep/secret.txt" 2>/dev/null
-rm -f "$TEST_CONTENT" "${TEST_CONTENT}2"
-
-# Create MBR-partitioned disk image
-dd if=/dev/zero of="$DISK_IMG" bs=1M count=$DISK_SIZE 2>/dev/null
-printf '2048,,L,*\n' | sfdisk "$DISK_IMG" 2>/dev/null
-dd if=.part.img of="$DISK_IMG" bs=512 seek=$PART_START conv=notrunc 2>/dev/null
-rm -f .part.img
 
 # --- Start QEMU with disk ---
 qemu_start_with_disk || { fail "QEMU failed to start"; exit 1; }
@@ -161,5 +115,4 @@ else
 fi
 
 qemu_stop
-rm -f "$DISK_IMG"
 exit $errors

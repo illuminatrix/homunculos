@@ -24,9 +24,7 @@ echo "  Subtest 6: ioctl(1, TCSETS) = 0 (stdout)"
 echo "  Subtest 7: Ring 3 CS register (regression)"
 echo "  Subtest 8: 'poweroff' shuts down QEMU (regression)"
 
-# --- Setup disk with ioctl_test included ---
-prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
-# Add ioctl_test to the disk (ext2 is at partition offset 2048 sectors)
+# Add ioctl_test to the existing shared disk
 IOCTL_TEST_BIN="$(dirname "$0")/ioctl_test.elf"
 dd if="$DISK_IMG" bs=512 skip=2048 of=.part.img 2>/dev/null
 debugfs -w .part.img -R "write $IOCTL_TEST_BIN /bin/ioctl_test" 2>/dev/null

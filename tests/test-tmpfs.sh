@@ -11,7 +11,6 @@ echo "  Subtest 3: 'ls /dev' shows 'hello'"
 echo "  Subtest 4: 'cat /dev/hello' shows 'hello fs'"
 echo "  Subtest 5: 'poweroff' shuts down QEMU (regression)"
 
-prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
 qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
 errors=0

@@ -11,7 +11,6 @@ echo "  Subtest 3: cd .. prints /"
 echo "  Subtest 4: cd /dev/vga fails (not a dir)"
 echo "  Subtest 5: cd bin; ls shows files in /bin"
 
-prepare_basic_disk || { fail "Failed to prepare disk"; exit 1; }
 qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
 errors=0
