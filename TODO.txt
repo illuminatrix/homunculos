@@ -57,23 +57,23 @@ Build (on Linux host, not in-kernel):
 
 ===== P2: VFS / Filesystem Improvements =====
 
-[ ] ext2 write support   -- inode_ops->write, add_entry
-    ext2 is read-only; no file creation, no mkdir, no unlink.
+[x] ext2 write support   -- inode_ops->write, add_entry
+    ext2 is read/write; create, mkdir, symlink, readlink, unlink, access all work.
 
-[ ] open() flags   -- O_CREAT, O_TRUNC, O_RDWR, O_WRONLY
+[x] open() flags   -- O_CREAT, O_TRUNC, O_RDWR, O_WRONLY
     Currently ignores flags param.  kernel/syscall.c
 
-[ ] access   -- SYS_access (33)
+[x] access   -- SYS_access (33)
     Check file existence / mode.  Kernel currently has no permission model;
     could just return 0 if the inode exists.
 
-[ ] mkdir/rmdir   -- SYS_mkdir (39), SYS_rmdir (40)
-    Delegate to vfs_inode_ops->add_entry (tmpfs), ext2 write when ready.
+[x] mkdir/rmdir   -- SYS_mkdir (39), SYS_rmdir (40)
+    Delegate to vfs_inode_ops->add_entry (tmpfs, ext2).
 
-[ ] unlink   -- SYS_unlink (87)
+[x] unlink   -- SYS_unlink (87)
     Same dependency.
 
-[ ] symlink/readlink   -- SYS_symlink (83), SYS_readlink (85)
+[x] symlink/readlink   -- SYS_symlink (83), SYS_readlink (85)
     VFS needs a VFS_ISYMLINK type.
 
 ===== P3: Signals (hard, deferrable) =====

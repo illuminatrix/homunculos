@@ -36,18 +36,12 @@ if [ -f "$PIPETEST" ]; then
 fi
 
 # Command binaries
-for cmd in poweroff greeting uname ls cat stat hello pwd cd; do
+for cmd in poweroff greeting uname ls cat stat hello pwd cd touch write mkdir rm ln readlink; do
 	src="${TESTS_DIR}/../shell/bin/$cmd"
 	if [ -f "$src" ]; then
 		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null
 	fi
 done
-
-# ext2 write test binary
-EXT2WRITETEST="${TESTS_DIR}/ext2wrtest.elf"
-if [ -f "$EXT2WRITETEST" ]; then
-	debugfs -w .part.img -R "write $EXT2WRITETEST /bin/ext2wrtest" 2>/dev/null
-fi
 
 # ext2 test files
 TEST_CONTENT=$(mktemp)

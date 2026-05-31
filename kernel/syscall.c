@@ -821,10 +821,13 @@ sys_getdents(int fd, struct dirent *dirp, int count)
 		return -1;
 
 	int written = 0;
-	int idx = 0;
+	int idx = f->pos;
 	struct vfs_dirent dent;
 
-	while (inode->ops->readdir(inode, idx++, &dent) == 0) {
+	while (1) {
+		if (inode->ops->readdir(inode, idx, &dent) != 0)
+			break;
+
 		int namelen = strlen(dent.d_name);
 		int reclen = sizeof(struct dirent) + namelen + 2;
 
@@ -841,7 +844,10 @@ sys_getdents(int fd, struct dirent *dirp, int count)
 		*((char *)d + reclen - 1) = dent.d_type;
 
 		written += reclen;
+		idx++;
 	}
+
+	f->pos = idx;
 
 	return written;
 }

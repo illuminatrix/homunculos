@@ -24,19 +24,24 @@ void _start(void)
 		exit(1);
 	}
 
-	char buf[256];
-	int n = getdents(fd, (struct dirent *)buf, sizeof(buf));
-	if (n < 0) {
-		printf("getdents failed\n");
-		close(fd);
-		exit(1);
-	}
+	char buf[512];
 
-	int pos = 0;
-	while (pos < n) {
-		struct dirent *d = (struct dirent *)(buf + pos);
-		printf("%s ", d->d_name);
-		pos += d->d_reclen;
+	while (1) {
+		int n = getdents(fd, (struct dirent *)buf, sizeof(buf));
+		if (n < 0) {
+			printf("getdents failed\n");
+			close(fd);
+			exit(1);
+		}
+		if (n == 0)
+			break;
+
+		int pos = 0;
+		while (pos < n) {
+			struct dirent *d = (struct dirent *)(buf + pos);
+			printf("%s ", d->d_name);
+			pos += d->d_reclen;
+		}
 	}
 	printf("\n");
 

@@ -31,17 +31,23 @@ Once the shell prompt (`>`) appears, you can type:
 |---------|-------------|
 | `ls [path]` | List directory contents |
 | `cat <file>` | Print file contents to screen |
+| `touch <path>` | Create empty file |
+| `write <path> <content...>` | Write text to a file |
+| `mkdir <path>` | Create a directory |
+| `rm <path>` | Remove a file (unlink) |
+| `ln -s <target> <link>` | Create a symbolic link |
+| `readlink <path>` | Read and print symlink target |
 | `greeting` | Print "hello" (tests syscall read/write from ring 3) |
 | `echo <text>` | Echo typed characters back (tests per-char I/O loop) |
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
-| `cmd1 | cmd2` | Pipe output of cmd1 to input of cmd2 |
+| `cmd1 \| cmd2` | Pipe output of cmd1 to input of cmd2 |
 
 Filesystem layout
 -----------------
 
 ```
-/           -- ext2 (read-only, from disk.img)
+/           -- ext2 (read/write, from disk.img)
 /dev        -- tmpfs (writable, populated at boot)
 /dev/vga    -- VGA text-mode output
 /dev/kbd    -- PS/2 keyboard input
@@ -88,6 +94,7 @@ make -C tests test-mmap
 make -C tests test-multiboot
 make -C tests test-tmpfs
 make -C tests test-ext2
+make -C tests test-ext2-write
 ```
 
 Clean

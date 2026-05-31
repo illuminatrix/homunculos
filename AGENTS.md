@@ -192,7 +192,7 @@ struct file { const struct vfs_ops *ops; void *private_data; };
 - Registers detected drives as `hda`, `hdb`, etc. via `block_register_device()`
 - 28-bit LBA, PIO polling (no IRQ), single-sector reads/writes
 
-### ext2 Filesystem (Read-Only)
+### ext2 Filesystem (Read/Write)
 
 - `kernel/ext2.h` + `kernel/ext2.c` — on-disk structs (`ext2_sb`, `ext2_bgdesc`, `ext2_inode`, `ext2_dirent`)
 - Parses superblock, block group descriptors, inodes, directory entries, indirect blocks (single/double/triple)
