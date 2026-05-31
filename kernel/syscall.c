@@ -110,6 +110,27 @@ static struct vfs_inode *resolve_path(struct task *t, const char *path)
 	return vfs_resolve_path(buf);
 }
 
+static void build_abs_path(struct task *t, const char *path,
+			   char *out, int out_size)
+{
+	if (!path || !t || !out || out_size <= 0)
+		return;
+	if (path[0] == '/') {
+		strncpy(out, path, out_size - 1);
+		out[out_size - 1] = '\0';
+		normalize_path(out);
+		return;
+	}
+	int len = strlen(t->cwd);
+	if (len + strlen(path) + 2 > (uint32_t)out_size)
+		return;
+	memcpy(out, t->cwd, len);
+	if (out[len - 1] != '/')
+		out[len++] = '/';
+	strcpy(out + len, path);
+	normalize_path(out);
+}
+
 int
 sys_open(const char *path, int flags)
 {
@@ -117,21 +138,32 @@ sys_open(const char *path, int flags)
 	struct file *f;
 	int fd;
 	struct task *current = scheduler_get_current();
+	char abs_path[512];
 
-	(void)flags;
-
-	inode = resolve_path(current, path);
-	if (!inode)
+	if (!current || !path)
 		return -1;
 
-	f = vfs_open_file(inode);
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+
+	inode = vfs_resolve_path(abs_path);
+	if (!inode) {
+		if (!(flags & O_CREAT))
+			return -1;
+		inode = vfs_create_file(abs_path);
+		if (!inode)
+			return -1;
+	} else {
+		if (flags & O_TRUNC) {
+			/* Truncate: free all data blocks via write of size 0 */
+			if (inode->ops && inode->ops->write)
+				inode->ops->write(inode, 0, 0, 0);
+			inode->i_size = 0;
+		}
+	}
+
+	f = vfs_open_file_flags(inode, flags);
 	if (!f)
 		return -1;
-
-	if (!current) {
-		/* early boot, no task — can't allocate an fd */
-		return -1;
-	}
 
 	for (fd = 0; fd < VFS_MAX_FD; fd++) {
 		if (current->fd_table[fd] == 0) {
@@ -835,6 +867,78 @@ sys_ioctl(int fd, int cmd, void *arg)
 	return f->ops->ioctl(f, cmd, arg);
 }
 
+int
+sys_access(const char *path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path)
+		return -1;
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_access(abs_path);
+}
+
+int
+sys_mkdir(const char *path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path)
+		return -1;
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_mkdir(abs_path);
+}
+
+int
+sys_rmdir(const char *path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path)
+		return -1;
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_rmdir(abs_path);
+}
+
+int
+sys_unlink(const char *path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path)
+		return -1;
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_unlink(abs_path);
+}
+
+int
+sys_symlink(const char *target, const char *path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !target || !path)
+		return -1;
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_symlink(target, abs_path);
+}
+
+int
+sys_readlink(const char *path, char *buf, int size)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path || !buf)
+		return -1;
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_readlink(abs_path, buf, (uint32_t)size);
+}
+
 void
 syscall_init(void)
 {
@@ -864,4 +968,10 @@ syscall_init(void)
 	systemcall_table[SYS_ioctl]   = (uint32_t)sys_ioctl;
 	systemcall_table[SYS_pipe]    = (uint32_t)sys_pipe;
 	systemcall_table[SYS_dup2]    = (uint32_t)sys_dup2;
+	systemcall_table[SYS_access] = (uint32_t)sys_access;
+	systemcall_table[SYS_mkdir]  = (uint32_t)sys_mkdir;
+	systemcall_table[SYS_rmdir]  = (uint32_t)sys_rmdir;
+	systemcall_table[SYS_unlink] = (uint32_t)sys_unlink;
+	systemcall_table[SYS_symlink]= (uint32_t)sys_symlink;
+	systemcall_table[SYS_readlink]=(uint32_t)sys_readlink;
 }

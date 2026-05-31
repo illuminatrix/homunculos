@@ -1,7 +1,10 @@
 #include "vfs.h"
 #include <string.h>
+#include <stdio.h>
 
 #define TMPFS_MAX_ENTRIES 16
+#define TMPFS_MAX_DIRS 16
+#define TMPFS_MAX_SYMLINKS 16
 
 struct tmpfs_entry {
 	char name[64];
@@ -13,7 +16,12 @@ struct tmpfs_dir {
 	int count;
 };
 
-/* Static directory storage */
+/* Static pools */
+static struct tmpfs_dir tmpfs_dirs[TMPFS_MAX_DIRS];
+static int tmpfs_dir_next;
+static char tmpfs_symlink_targets[TMPFS_MAX_SYMLINKS][64];
+static int tmpfs_symlink_next;
+
 static struct tmpfs_dir tmpfs_root_data;
 static struct tmpfs_dir tmpfs_dev_data;
 static struct tmpfs_dir tmpfs_mnt_data;
@@ -67,11 +75,123 @@ static int tmpfs_add_entry(struct vfs_inode *dir, const char *name,
 	return 0;
 }
 
+static int tmpfs_remove_entry(struct vfs_inode *dir, const char *name)
+{
+	struct tmpfs_dir *td = (struct tmpfs_dir *)dir->private_data;
+	int i;
+
+	for (i = 0; i < td->count; i++) {
+		if (strcmp(td->entries[i].name, name) == 0) {
+			td->entries[i] = td->entries[td->count - 1];
+			td->count--;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static int tmpfs_mkdir(struct vfs_inode *parent, const char *name)
+{
+	struct tmpfs_dir *td = (struct tmpfs_dir *)parent->private_data;
+	struct tmpfs_dir *new_dir;
+
+	if (td->count >= TMPFS_MAX_ENTRIES)
+		return -1;
+
+	if (tmpfs_dir_next >= TMPFS_MAX_DIRS)
+		return -1;
+
+	new_dir = &tmpfs_dirs[tmpfs_dir_next++];
+	memset(new_dir, 0, sizeof(*new_dir));
+
+	struct vfs_inode *inode = vfs_alloc_inode();
+	if (!inode)
+		return -1;
+
+	inode->i_type = VFS_IDIR;
+	inode->ops = parent->ops;
+	inode->private_data = new_dir;
+
+	return tmpfs_add_entry(parent, name, inode);
+}
+
+static int tmpfs_unlink(struct vfs_inode *parent, const char *name)
+{
+	return tmpfs_remove_entry(parent, name);
+}
+
+static int tmpfs_rmdir(struct vfs_inode *parent, const char *name)
+{
+	struct tmpfs_dir *td = (struct tmpfs_dir *)parent->private_data;
+	int i;
+
+	for (i = 0; i < td->count; i++) {
+		if (strcmp(td->entries[i].name, name) == 0) {
+			struct tmpfs_dir *child = (struct tmpfs_dir *)
+				td->entries[i].inode->private_data;
+			if (child && child->count > 0)
+				return -1;
+			td->entries[i] = td->entries[td->count - 1];
+			td->count--;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static int tmpfs_symlink(struct vfs_inode *parent, const char *name,
+			 const char *target)
+{
+	if (tmpfs_symlink_next >= TMPFS_MAX_SYMLINKS)
+		return -1;
+
+	char *target_copy = tmpfs_symlink_targets[tmpfs_symlink_next];
+	memset(target_copy, 0, 64);
+	int len = strlen(target);
+	if (len > 63)
+		len = 63;
+	memcpy(target_copy, target, len);
+	target_copy[len] = '\0';
+
+	struct vfs_inode *inode = vfs_alloc_inode();
+	if (!inode)
+		return -1;
+
+	inode->i_type = VFS_ISYMLINK;
+	inode->ops = parent->ops;
+	inode->private_data = target_copy;
+	inode->i_size = len;
+	tmpfs_symlink_next++;
+
+	return tmpfs_add_entry(parent, name, inode);
+}
+
+static int tmpfs_readlink_op(struct vfs_inode *inode, char *buf,
+			     uint32_t size)
+{
+	char *target = (char *)inode->private_data;
+	if (!target)
+		return -1;
+
+	int len = strlen(target);
+	if ((int)size - 1 < len)
+		len = size - 1;
+	memcpy(buf, target, len);
+	buf[len] = '\0';
+	return len;
+}
+
 static struct vfs_inode_ops tmpfs_dir_ops = {
 	.read      = 0,
 	.readdir   = tmpfs_readdir,
 	.lookup    = tmpfs_lookup,
 	.add_entry = tmpfs_add_entry,
+	.remove_entry = tmpfs_remove_entry,
+	.mkdir     = tmpfs_mkdir,
+	.rmdir     = tmpfs_rmdir,
+	.unlink    = tmpfs_unlink,
+	.symlink   = tmpfs_symlink,
+	.readlink  = tmpfs_readlink_op,
 };
 
 /* --- Init --- */
@@ -84,6 +204,8 @@ void tmpfs_init(void)
 	root_dir->count = 0;
 	dev_dir->count = 0;
 	tmpfs_mnt_data.count = 0;
+	tmpfs_dir_next = 0;
+	tmpfs_symlink_next = 0;
 
 	/* Allocate root directory inode */
 	struct vfs_inode *root_inode = vfs_alloc_inode();

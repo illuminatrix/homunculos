@@ -43,6 +43,12 @@ for cmd in poweroff greeting uname ls cat stat hello pwd cd; do
 	fi
 done
 
+# ext2 write test binary
+EXT2WRITETEST="${TESTS_DIR}/ext2wrtest.elf"
+if [ -f "$EXT2WRITETEST" ]; then
+	debugfs -w .part.img -R "write $EXT2WRITETEST /bin/ext2wrtest" 2>/dev/null
+fi
+
 # ext2 test files
 TEST_CONTENT=$(mktemp)
 printf "Hello from ext2!" > "$TEST_CONTENT"

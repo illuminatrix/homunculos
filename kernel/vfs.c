@@ -149,6 +149,7 @@ struct vfs_inode *vfs_resolve_path(const char *path)
 	struct vfs_inode *current = vfs_root_inode();
 	char buf[64];
 	int i;
+	int symlink_depth = 0;
 
 	if (!current || !path)
 		return 0;
@@ -174,12 +175,126 @@ struct vfs_inode *vfs_resolve_path(const char *path)
 		if (!current)
 			return 0;
 
+		/* Follow symlinks (limit recursion to avoid loops) */
+		while (current->i_type == VFS_ISYMLINK
+		       && current->ops && current->ops->readlink) {
+			char link_target[256];
+			int n;
+			if (symlink_depth++ > 8)
+				return 0;
+			n = current->ops->readlink(current, link_target,
+						   sizeof(link_target));
+			if (n < 0)
+				return 0;
+			link_target[n] = '\0';
+			/* If absolute, restart resolution from root */
+			if (link_target[0] == '/') {
+				current = vfs_root_inode();
+				if (*path == '/')
+					path++;
+				continue;
+			}
+			/* Relative: look up the link target in current dir */
+			current = vfs_resolve_mount(current);
+			current = current->ops->lookup(current, link_target);
+			if (!current)
+				return 0;
+		}
+
 		if (*path == '/')
 			path++;
 	}
 
 	/* Resolve mount at the final inode too */
-	return vfs_resolve_mount(current);
+	current = vfs_resolve_mount(current);
+	/* Follow trailing symlink */
+	if (current->i_type == VFS_ISYMLINK
+	    && current->ops && current->ops->readlink) {
+		char link_target[256];
+		int n;
+		if (symlink_depth++ > 8)
+			return 0;
+		n = current->ops->readlink(current, link_target,
+					   sizeof(link_target));
+		if (n < 0)
+			return 0;
+		link_target[n] = '\0';
+		if (link_target[0] == '/')
+			current = vfs_resolve_path(link_target);
+		else {
+			current = vfs_root_inode();
+			current = vfs_resolve_mount(current);
+			current = current->ops->lookup(current, link_target);
+			if (!current)
+				return 0;
+			current = vfs_resolve_mount(current);
+		}
+	}
+	return current;
+}
+
+struct vfs_inode *vfs_resolve_path_no_follow(const char *path)
+{
+	struct vfs_inode *current = vfs_root_inode();
+	char buf[64];
+	int i;
+	int symlink_depth = 0;
+
+	if (!current || !path)
+		return 0;
+
+	if (*path == '/')
+		path++;
+	if (*path == '\0')
+		return vfs_resolve_mount(current);
+
+	while (*path) {
+		i = 0;
+		while (*path && *path != '/' && i < (int)sizeof(buf) - 1) {
+			buf[i++] = *path++;
+		}
+		buf[i] = '\0';
+
+		/* Before looking up, resolve mount if current is a mount point */
+		current = vfs_resolve_mount(current);
+
+		if (!current->ops || !current->ops->lookup)
+			return 0;
+		current = current->ops->lookup(current, buf);
+		if (!current)
+			return 0;
+
+		/* Only follow symlinks for non-final (intermediate) components */
+		if (*path == '/') {
+			while (current->i_type == VFS_ISYMLINK
+			       && current->ops && current->ops->readlink) {
+				char link_target[256];
+				int n;
+				if (symlink_depth++ > 8)
+					return 0;
+				n = current->ops->readlink(current, link_target,
+							   sizeof(link_target));
+				if (n < 0)
+					return 0;
+				link_target[n] = '\0';
+				/* If absolute, restart resolution from root */
+				if (link_target[0] == '/') {
+					current = vfs_root_inode();
+					continue;
+				}
+				/* Relative: look up the link target in current dir */
+				current = vfs_resolve_mount(current);
+				current = current->ops->lookup(current, link_target);
+				if (!current)
+					return 0;
+			}
+			path++;
+		}
+	}
+
+	/* Resolve mount at the final inode, but do NOT follow trailing symlink */
+	current = vfs_resolve_mount(current);
+	return current;
 }
 
 int vfs_register_by_path(const char *path, struct vfs_inode *inode)
@@ -290,6 +405,12 @@ static struct vfs_inode_ops vfs_dev_inode_ops = {
 	.readdir   = 0,
 	.lookup    = 0,
 	.add_entry = 0,
+	.remove_entry = 0,
+	.mkdir     = 0,
+	.rmdir     = 0,
+	.unlink    = 0,
+	.symlink   = 0,
+	.readlink  = 0,
 };
 
 void vfs_create_device_nodes(void)
@@ -331,13 +452,14 @@ struct file *vfs_alloc_file(void)
 			vfs_open_files[i].private_data = 0;
 			vfs_open_files[i].pos = 0;
 			vfs_open_files[i].refcount = 1;
+			vfs_open_files[i].flags = 0;
 			return &vfs_open_files[i];
 		}
 	}
 	return 0;
 }
 
-struct file *vfs_open_file(struct vfs_inode *inode)
+struct file *vfs_open_file_flags(struct vfs_inode *inode, int flags)
 {
 	int i;
 	if (!inode)
@@ -348,10 +470,17 @@ struct file *vfs_open_file(struct vfs_inode *inode)
 			vfs_open_files[i].private_data = inode;
 			vfs_open_files[i].pos = 0;
 			vfs_open_files[i].refcount = 1;
+			vfs_open_files[i].flags = flags;
 			return &vfs_open_files[i];
 		}
 	}
+	printf("vfs_open_file_flags: out of slots!\n");
 	return 0;
+}
+
+struct file *vfs_open_file(struct vfs_inode *inode)
+{
+	return vfs_open_file_flags(inode, O_RDONLY);
 }
 
 void vfs_close_file(struct file *f)
@@ -416,6 +545,9 @@ void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
 	case VFS_IDIR:
 		mode = 040755;   /* S_IFDIR | S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH */
 		break;
+	case VFS_ISYMLINK:
+		mode = 0120777;  /* S_IFLNK | 0777 */
+		break;
 	default:
 		mode = 0100644;
 		break;
@@ -438,8 +570,8 @@ void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
 
 static int vfs_file_write(struct file *f, const void *buf, size_t nbyte)
 {
-	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
 	int ret;
+	struct vfs_inode *inode = (struct vfs_inode *)f->private_data;
 	if (!inode || !inode->ops || !inode->ops->write)
 		return -1;
 	ret = inode->ops->write(inode, f->pos, buf, nbyte);
@@ -454,4 +586,200 @@ static int vfs_file_ioctl(struct file *f, int cmd, void *arg)
 	if (!inode || !inode->ops || !inode->ops->ioctl)
 		return -1;
 	return inode->ops->ioctl(inode, cmd, arg);
+}
+
+/* ----------------------------------------------------------------
+ * Path manipulation helpers
+ * ----------------------------------------------------------------*/
+
+void vfs_split_path(const char *path, char *dir_out, int dir_size,
+		    char *name_out, int name_size)
+{
+	const char *p;
+	int i;
+
+	if (!path)
+		return;
+
+	p = path;
+	if (*p == '/')
+		p++;
+
+	/* Find last '/' */
+	const char *last_slash = 0;
+	const char *q = p;
+	while (*q) {
+		if (*q == '/')
+			last_slash = q;
+		q++;
+	}
+
+	if (last_slash) {
+		/* Has parent dir */
+		i = 0;
+		if (dir_out && dir_size > 0)
+			dir_out[i++] = '/';
+		for (; &p[i - 1] < last_slash && i < dir_size - 1; i++)
+			dir_out[i] = p[i - 1];
+		if (dir_out)
+			dir_out[i] = '\0';
+
+		if (name_out) {
+			i = 0;
+			while (last_slash[1 + i] && i < name_size - 1) {
+				name_out[i] = last_slash[1 + i];
+				i++;
+			}
+			name_out[i] = '\0';
+		}
+	} else {
+		/* No slash — single component, parent is root */
+		if (dir_out && dir_size > 0) {
+			dir_out[0] = '/';
+			dir_out[1] = '\0';
+		}
+		if (name_out) {
+			i = 0;
+			while (p[i] && i < name_size - 1) {
+				name_out[i] = p[i];
+				i++;
+			}
+			name_out[i] = '\0';
+		}
+	}
+}
+
+struct vfs_inode *vfs_create_file(const char *path)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *parent;
+	struct vfs_inode *inode;
+
+	if (!path)
+		return 0;
+
+	vfs_split_path(path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->add_entry)
+		return 0;
+
+	inode = vfs_alloc_inode();
+	if (!inode)
+		return 0;
+	inode->i_type = VFS_IFILE;
+
+	/* Filesystem fills in private_data via add_entry */
+	if (parent->ops->add_entry(parent, name, inode) < 0) {
+		vfs_free_inode(inode);
+		return 0;
+	}
+	return inode;
+}
+
+int vfs_mkdir(const char *path)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *parent;
+
+	if (!path)
+		return -1;
+
+	vfs_split_path(path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->mkdir)
+		return -1;
+
+	return parent->ops->mkdir(parent, name);
+}
+
+int vfs_rmdir(const char *path)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *parent;
+
+	if (!path)
+		return -1;
+
+	vfs_split_path(path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->rmdir)
+		return -1;
+
+	return parent->ops->rmdir(parent, name);
+}
+
+int vfs_unlink(const char *path)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *parent;
+
+	if (!path)
+		return -1;
+
+	vfs_split_path(path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->unlink)
+		return -1;
+
+	return parent->ops->unlink(parent, name);
+}
+
+int vfs_symlink(const char *target, const char *path)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *parent;
+
+	if (!target || !path)
+		return -1;
+
+	vfs_split_path(path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->symlink)
+		return -1;
+
+	return parent->ops->symlink(parent, name, target);
+}
+
+int vfs_readlink(const char *path, char *buf, uint32_t size)
+{
+	struct vfs_inode *inode;
+
+	if (!path || !buf)
+		return -1;
+
+		inode = vfs_resolve_path_no_follow(path);
+	if (!inode || inode->i_type != VFS_ISYMLINK
+	    || !inode->ops || !inode->ops->readlink)
+		return -1;
+
+	return inode->ops->readlink(inode, buf, size);
+}
+
+int vfs_access(const char *path)
+{
+	struct vfs_inode *inode;
+	if (!path)
+		return -1;
+	inode = vfs_resolve_path(path);
+	return inode ? 0 : -1;
 }

@@ -23,6 +23,7 @@ struct file {
 	void *private_data;
 	uint32_t pos;
 	int refcount;
+	int flags;
 };
 
 /* Driver init via linker section */
@@ -54,8 +55,17 @@ struct vfs_stat {
 
 /* === VFS Inode Layer === */
 
-#define VFS_IFILE 0
-#define VFS_IDIR  1
+#define VFS_IFILE    0
+#define VFS_IDIR     1
+#define VFS_ISYMLINK 2
+
+/* Open flags (Linux-compatible) */
+#define O_RDONLY    0
+#define O_WRONLY    1
+#define O_RDWR      2
+#define O_CREAT    64
+#define O_TRUNC   512
+#define O_APPEND 1024
 
 struct vfs_dirent {
 	uint32_t d_ino;
@@ -75,6 +85,14 @@ struct vfs_inode_ops {
 				    const char *name);
 	int (*add_entry)(struct vfs_inode *dir, const char *name,
 			 struct vfs_inode *entry);
+	int (*remove_entry)(struct vfs_inode *dir, const char *name);
+	int (*mkdir)(struct vfs_inode *parent, const char *name);
+	int (*rmdir)(struct vfs_inode *parent, const char *name);
+	int (*unlink)(struct vfs_inode *parent, const char *name);
+	int (*symlink)(struct vfs_inode *parent, const char *name,
+		       const char *target);
+	int (*readlink)(struct vfs_inode *inode, char *buf,
+			uint32_t size);
 	int (*ioctl)(struct vfs_inode *inode, int cmd, void *arg);
 };
 
@@ -103,14 +121,25 @@ struct vfs_inode *vfs_root_inode(void);
 
 void vfs_set_root_inode(struct vfs_inode *inode);
 struct vfs_inode *vfs_resolve_path(const char *path);
+struct vfs_inode *vfs_resolve_path_no_follow(const char *path);
 int vfs_register_by_path(const char *path, struct vfs_inode *inode);
 void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf);
 int vfs_register_device(const char *name, const struct vfs_ops *ops,
 			void *private_data);
 void vfs_create_device_nodes(void);
 struct file *vfs_open_file(struct vfs_inode *inode);
+struct file *vfs_open_file_flags(struct vfs_inode *inode, int flags);
 struct file *vfs_alloc_file(void);
 void vfs_close_file(struct file *f);
+struct vfs_inode *vfs_create_file(const char *path);
+int vfs_mkdir(const char *path);
+int vfs_rmdir(const char *path);
+int vfs_unlink(const char *path);
+int vfs_symlink(const char *target, const char *path);
+int vfs_readlink(const char *path, char *buf, uint32_t size);
+int vfs_access(const char *path);
+void vfs_split_path(const char *path, char *dir_out, int dir_size,
+		    char *name_out, int name_size);
 
 /* === Mount Abstraction === */
 

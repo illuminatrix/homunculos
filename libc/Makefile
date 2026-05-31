@@ -37,6 +37,13 @@ unistd/getcwd.o \
 unistd/ioctl.o \
 unistd/pipe.o \
 unistd/dup2.o \
+unistd/access.o \
+unistd/mkdir.o \
+unistd/rmdir.o \
+unistd/unlink.o \
+unistd/symlink.o \
+unistd/readlink.o \
+unistd/write.o \
 
 OBJS:=\
 $(FREEOBJS) \
