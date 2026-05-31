@@ -36,9 +36,12 @@ Once the shell prompt (`>`) appears, you can type:
 | `mkdir <path>` | Create a directory |
 | `rm <path>` | Remove a file (unlink) |
 | `ln -s <target> <link>` | Create a symbolic link |
-| `readlink <path>` | Read and print symlink target |
+| `readlink <path>` | Print symlink target |
+| `cd [path]` | Change current directory |
+| `pwd` | Print current directory |
+| `stat <path>` | Show file inode metadata |
+| `uname` | Print kernel name, version, arch |
 | `greeting` | Print "hello" (tests syscall read/write from ring 3) |
-| `echo <text>` | Echo typed characters back (tests per-char I/O loop) |
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
 | `cmd1 \| cmd2` | Pipe output of cmd1 to input of cmd2 |
