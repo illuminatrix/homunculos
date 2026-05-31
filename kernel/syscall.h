@@ -33,6 +33,9 @@
 #define SYS_uname    122
 #define SYS_getdents  141
 #define SYS_getcwd   183
+#define SYS_time       13
 #define SYS_ioctl     54
+#define SYS_gettimeofday 78
+#define SYS_nanosleep  162
 
 #endif

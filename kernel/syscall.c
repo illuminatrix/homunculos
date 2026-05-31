@@ -945,6 +945,87 @@ sys_readlink(const char *path, char *buf, int size)
 	return vfs_readlink(abs_path, buf, (uint32_t)size);
 }
 
+/* --- Time syscalls --- */
+
+/* Kernel-side timeval/timespec (matches libc <sys/time.h>) */
+struct k_timeval {
+	int32_t tv_sec;
+	int32_t tv_usec;
+};
+
+struct k_timespec {
+	int32_t tv_sec;
+	int32_t tv_nsec;
+};
+
+#define TICK_HZ 100
+
+int
+sys_gettimeofday(struct k_timeval *tv, void *tz)
+{
+	if (!tv)
+		return -1;
+	uint32_t ticks = scheduler_get_tick_count();
+	tv->tv_sec = ticks / TICK_HZ;
+	tv->tv_usec = (ticks % TICK_HZ) * (1000000 / TICK_HZ);
+	return 0;
+}
+
+int
+sys_time(int32_t *tloc)
+{
+	int32_t sec = scheduler_get_tick_count() / TICK_HZ;
+	if (tloc)
+		*tloc = sec;
+	return sec;
+}
+
+int
+sys_nanosleep(struct k_timespec *req, struct k_timespec *rem)
+{
+	struct task *current;
+
+	if (!req)
+		return -1;
+	if (req->tv_sec < 0 || req->tv_nsec < 0)
+		return -1;
+
+	uint32_t total_ticks = req->tv_sec * TICK_HZ
+		+ req->tv_nsec / (1000000000 / TICK_HZ);
+
+	if (total_ticks == 0) {
+		/* Minimum sleep = 1 tick (10ms) */
+		total_ticks = 1;
+	}
+
+	current = scheduler_get_current();
+	if (!current)
+		return -1;
+
+	current->wakeup_tick = scheduler_get_tick_count() + total_ticks;
+	current->state = TASK_STATE_BLOCKED;
+
+	while (scheduler_get_tick_count() < current->wakeup_tick) {
+		schedule();
+		/* If schedule() returned (no other READY task), halt and wait */
+		if (scheduler_get_tick_count() < current->wakeup_tick)
+			__asm__ volatile("sti; hlt");
+	}
+
+	current->state = TASK_STATE_RUNNING;
+
+	if (rem) {
+		uint32_t ticks_left = current->wakeup_tick
+			> scheduler_get_tick_count()
+			? current->wakeup_tick - scheduler_get_tick_count()
+			: 0;
+		rem->tv_sec = ticks_left / TICK_HZ;
+		rem->tv_nsec = (ticks_left % TICK_HZ)
+			* (1000000000 / TICK_HZ);
+	}
+	return 0;
+}
+
 void
 syscall_init(void)
 {
@@ -980,4 +1061,7 @@ syscall_init(void)
 	systemcall_table[SYS_unlink] = (uint32_t)sys_unlink;
 	systemcall_table[SYS_symlink]= (uint32_t)sys_symlink;
 	systemcall_table[SYS_readlink]=(uint32_t)sys_readlink;
+	systemcall_table[SYS_time]    = (uint32_t)sys_time;
+	systemcall_table[SYS_gettimeofday]=(uint32_t)sys_gettimeofday;
+	systemcall_table[SYS_nanosleep] =(uint32_t)sys_nanosleep;
 }

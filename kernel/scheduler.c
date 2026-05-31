@@ -32,8 +32,24 @@ struct task *scheduler_get_current(void) {
 	return current_task;
 }
 
+uint32_t scheduler_get_tick_count(void) {
+	return tick_count;
+}
+
 void scheduler_tick(void) {
 	tick_count++;
+	/* Wake any sleeping tasks whose wakeup tick has arrived */
+	if (tick_count > 0) {
+		extern struct task tasks[];
+		for (int i = 0; i < MAX_TASKS; i++) {
+			struct task *t = &tasks[i];
+			if (t->state == TASK_STATE_BLOCKED && t->wakeup_tick > 0
+			    && t->wakeup_tick <= tick_count) {
+				t->wakeup_tick = 0;
+				t->state = TASK_STATE_READY;
+			}
+		}
+	}
 	if ((tick_count % TIME_SLICE) == 0) {
 		schedule();
 	}

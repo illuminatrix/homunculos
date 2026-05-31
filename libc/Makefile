@@ -44,6 +44,10 @@ unistd/unlink.o \
 unistd/symlink.o \
 unistd/readlink.o \
 unistd/write.o \
+unistd/time.o \
+unistd/gettimeofday.o \
+unistd/nanosleep.o \
+unistd/sleep.o \
 
 OBJS:=\
 $(FREEOBJS) \

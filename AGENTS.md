@@ -134,8 +134,11 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 108 | SYS_fstat | `sys_fstat` | `int sys_fstat(int fd, struct stat *buf)` |
 | 21 | SYS_mount | `sys_mount` | `int sys_mount(const char *source, const char *target, const char *fstype)` |
 | 22 | SYS_umount | `sys_unmount` | `int sys_unmount(const char *target)` |
+| 13 | SYS_time | `sys_time` | `int sys_time(int32_t *tloc)` |
 | 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |
 | 64 | SYS_getppid | `sys_getppid` | `int sys_getppid(void)` |
+| 78 | SYS_gettimeofday | `sys_gettimeofday` | `int sys_gettimeofday(struct k_timeval *tv, void *tz)` |
+| 162 | SYS_nanosleep | `sys_nanosleep` | `int sys_nanosleep(struct k_timespec *req, struct k_timespec *rem)` |
 | 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(void)` |
 | 122 | SYS_uname | `sys_uname` | `int sys_uname(struct utsname *buf)` |
 
@@ -272,6 +275,7 @@ make -C tests test-mmap
 make -C tests test-multiboot
 make -C tests test-tmpfs
 make -C tests test-ext2
+make -C tests test-time
 
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock

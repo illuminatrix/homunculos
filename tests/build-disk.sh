@@ -36,7 +36,7 @@ if [ -f "$PIPETEST" ]; then
 fi
 
 # Command binaries
-for cmd in poweroff greeting uname ls cat stat hello pwd cd touch write mkdir rm ln readlink; do
+for cmd in poweroff greeting uname ls cat stat hello pwd cd touch write mkdir rm ln readlink sleep systime; do
 	src="${TESTS_DIR}/../shell/bin/$cmd"
 	if [ -f "$src" ]; then
 		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null

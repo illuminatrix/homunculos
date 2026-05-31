@@ -41,6 +41,8 @@ Once the shell prompt (`>`) appears, you can type:
 | `pwd` | Print current directory |
 | `stat <path>` | Show file inode metadata |
 | `uname` | Print kernel name, version, arch |
+| `sleep <seconds>` | Sleep for N seconds |
+| `systime` | Print seconds since boot |
 | `greeting` | Print "hello" (tests syscall read/write from ring 3) |
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |

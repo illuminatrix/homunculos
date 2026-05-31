@@ -86,11 +86,11 @@ Build (on Linux host, not in-kernel):
 
 ===== P4: Time (needed for timestamps, sleep) =====
 
-[ ] gettimeofday   -- SYS_gettimeofday (78)
+[x] gettimeofday   -- SYS_gettimeofday (78)
     Read PIT tick count, convert to seconds+usec.
 
-[ ] time   -- SYS_time (13)
-[ ] nanosleep   -- SYS_nanosleep (162)
+[x] time   -- SYS_time (13)
+[x] nanosleep   -- SYS_nanosleep (162)
 
 ===== P5: Misc / Nice-to-Have =====
 

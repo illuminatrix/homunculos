@@ -51,7 +51,7 @@ prepare_basic_disk() {
 	debugfs -w .part.img -R "mkdir /bin" 2>/dev/null
 	debugfs -w .part.img -R "write $shell_bin /bin/shell" 2>/dev/null
 	debugfs -w .part.img -R "write $init_bin /bin/init" 2>/dev/null
-	for cmd in poweroff greeting uname ls cat stat hello pwd cd; do
+	for cmd in poweroff greeting uname ls cat stat hello pwd cd sleep systime; do
 		local src="${TESTS_DIR}/../shell/bin/$cmd"
 		if [ -f "$src" ]; then
 			debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null

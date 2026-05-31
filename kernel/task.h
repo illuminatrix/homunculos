@@ -32,6 +32,7 @@ struct task {
 	uint32_t brk_start;
 	uint32_t program_break;
 	char cwd[256];
+	uint32_t wakeup_tick;
 };
 
 struct task *task_alloc(void);
