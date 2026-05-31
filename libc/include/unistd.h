@@ -19,7 +19,8 @@ int close(int);
 int exec(const char *);
 int execv(const char *, char *const *);
 int execve(const char *, char *const *, char *const *);
-int waitpid(int, int *);
+#define WNOHANG 1
+int waitpid(int, int *, int);
 int mount(const char *, const char *, const char *);
 int unmount(const char *);
 int yield(void);

@@ -10,7 +10,7 @@ void _start(void)
 			: : "a"(4), "b"(2), "c"(msg), "d"(17));
 		exit(1);
 	} else if (pid > 0) {
-		waitpid(pid, 0);
+		waitpid(pid, 0, 0);
 		exit(0);
 	}
 

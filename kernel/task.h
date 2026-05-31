@@ -46,7 +46,10 @@ struct task *task_find_child_exited(int parent_pid);
 void task_update_context_user(struct task *t, uint32_t entry, uint32_t user_esp_top);
 void task_set_pdir(struct task *t, uint32_t *pdir);
 void task_block(void);
+#define WNOHANG 1
+
 void task_wake(int pid);
-int task_waitpid(int pid, int *status);
+int task_waitpid(int pid, int *status, int options);
+struct task *task_find_child_exited_pid(int parent_pid, int target_pid);
 
 #endif

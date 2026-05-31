@@ -206,16 +206,15 @@ void task_wake(int pid)
 	}
 }
 
-int task_waitpid(int pid, int *status)
+int task_waitpid(int pid, int *status, int options)
 {
 	struct task *current = scheduler_get_current();
 	if (!current)
 		return -1;
 
-	(void)pid;
-
 	while (1) {
-		struct task *child = task_find_child_exited(current->pid);
+		struct task *child = task_find_child_exited_pid(current->pid,
+							       pid);
 		if (child) {
 			int cpid = child->pid;
 			if (status)
@@ -223,6 +222,8 @@ int task_waitpid(int pid, int *status)
 			child->parent_pid = -1;
 			return cpid;
 		}
+		if (options & WNOHANG)
+			return 0;
 		task_block();
 	}
 }
@@ -237,10 +238,17 @@ void task_set_exit_status(int status)
 
 struct task *task_find_child_exited(int parent_pid)
 {
+	return task_find_child_exited_pid(parent_pid, -1);
+}
+
+struct task *task_find_child_exited_pid(int parent_pid, int target_pid)
+{
 	for (int i = 0; i < next_pid; i++) {
 		if (tasks[i].parent_pid == parent_pid
-		    && tasks[i].state == TASK_STATE_EXITED)
-			return &tasks[i];
+		    && tasks[i].state == TASK_STATE_EXITED) {
+			if (target_pid <= 0 || tasks[i].pid == target_pid)
+				return &tasks[i];
+		}
 	}
 	return 0;
 }

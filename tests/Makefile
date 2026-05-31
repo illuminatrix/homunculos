@@ -16,9 +16,9 @@ CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 \
 IOCTL_TEST_BIN := $(TESTS_DIR)/ioctl_test.elf
 PIPE_TEST_BIN := $(TESTS_DIR)/prepend.elf
 
-TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe
+TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
-DISK_TESTS := test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe
+DISK_TESTS := test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid
 
 .PHONY: all test $(TEST_SCRIPTS) clean
 
@@ -99,6 +99,9 @@ test-ioctl: $(KERNEL_BIN) $(IOCTL_TEST_BIN) $(DISK_IMG)
 
 test-pipe: $(KERNEL_BIN) $(PIPE_TEST_BIN) $(DISK_IMG)
 	@$(TESTS_DIR)/test-pipe.sh
+
+test-waitpid: $(KERNEL_BIN) $(DISK_IMG)
+	@$(TESTS_DIR)/test-waitpid.sh
 
 clean:
 	rm -f $(TESTS_DIR)/*.sock

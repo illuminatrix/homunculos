@@ -170,7 +170,7 @@ static struct task *setup_main_task(uint32_t entry, uint32_t *pdir,
 static void init_waiter(void *arg)
 {
 	(void)arg;
-	task_waitpid(-1, 0);
+	task_waitpid(-1, 0, 0);
 	panic("init process exited");
 }
 

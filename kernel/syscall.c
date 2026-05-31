@@ -470,9 +470,7 @@ fail:
 int
 sys_waitpid(int pid, int *status, int options)
 {
-	(void)pid;
-	(void)options;
-	return task_waitpid(pid, status);
+	return task_waitpid(pid, status, options);
 }
 
 static struct block_device *

@@ -48,8 +48,9 @@ Build (on Linux host, not in-kernel):
 [x] dup2   -- SYS_dup2 (63)
     fd table copy via refcounted file structs.  Needed for pipe redirection.
 
-[ ] waitpid options   -- currently ignores pid, WNOHANG, etc.
-    Support pid==-1, pid==child_pid, WNOHANG.  kernel/task.c
+[x] waitpid options   -- pid==-1 (any), pid==child_pid, WNOHANG
+    WNOHANG=1: return 0 if no child exited, else block.
+    pid>0: wait for specific child.  kernel/task.c
 
 [x] exec with argv/envp   -- SYS_execve with argv/envp via sys_exec.
     Test: `run /bin/hello` prints "hello from exec".  kernel/syscall.c

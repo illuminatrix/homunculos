@@ -110,7 +110,7 @@ static void shell_execute(char *buf)
 		if (pid == 0)
 			exec_command(argv);
 
-		waitpid(pid, 0);
+		waitpid(pid, 0, 0);
 		return;
 	}
 
@@ -177,7 +177,7 @@ static void shell_execute(char *buf)
 	}
 
 	for (i = 0; i < nsegs; i++)
-		waitpid(pids[i], 0);
+		waitpid(pids[i], 0, 0);
 }
 
 void _start(void)
