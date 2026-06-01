@@ -100,4 +100,4 @@ Build (on Linux host, not in-kernel):
 [ ] reboot() with magic args   -- LINUX_REBOOT_MAGIC1/2
 [ ] /dev/null   -- writes discarded, reads return EOF
 [ ] /dev/tty   -- symlink to current controlling terminal
-[ ] environ / env vars in exec
+[x] environ / env vars in exec

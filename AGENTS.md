@@ -27,6 +27,7 @@
 
 1. Append `<path/to/file.o>` to the appropriate `Makefile.mk`
 2. `drivers/Makefile.mk` includes sub-driver makefiles; add an `include` line there when adding a driver
+3. Always update ALL linker commands when adding a libc object directory — every `LD` command in every `Makefile.mk` and `tests/Makefile` must list the dir. Check with `grep '\*\.o'` for linker patterns.
 
 ### Before committing
 
@@ -254,6 +255,7 @@ tests/               -- QEMU integration tests
 - **ATA polling in QEMU TCG**: Tight polling loops on PIO status registers may hang because QEMU TCG virtual time doesn't advance for the device model. Always include `io_delay()` (volatile delay loop) between polling iterations.
 - **vsprintf only handles %c, %s, %d**: No support for hex, unsigned, width, or precision.
 - **No heap allocator**: Only `mm_frame_alloc()` (4KB pages). No malloc/kmalloc/brk.
+- **setenv/putenv must compact env_ptrs on removal**: Replacing a value that won't fit in-place requires deleting the old entry. Simply setting `env_ptrs[i]=0` leaves a NULL hole, and `sys_exec` iterates the env array until the first NULL — it will see an empty env. Always shift remaining entries down and decrement `env_count`.
 - **memcmp broken in inline asm**: `libc/string/memcmp.c` had a bug where label `2:` (set result to 0 for "equal") always executed AFTER label `1:` (negate result for "less than"), causing memcmp to ALWAYS return 0 regardless of input. Fixed by using a simple C loop. If you add inline asm with multiple labels, make sure label paths are exclusive (use `jmp` after `1:` to skip `2:` when `a > b`).
 
 ## QEMU Testing / Debugging
@@ -275,7 +277,15 @@ make -C tests test-mmap
 make -C tests test-multiboot
 make -C tests test-tmpfs
 make -C tests test-ext2
+make -C tests test-ext2-write
+make -C tests test-stat
+make -C tests test-execv
+make -C tests test-chdir
+make -C tests test-ioctl
+make -C tests test-pipe
+make -C tests test-waitpid
 make -C tests test-time
+make -C tests test-env
 
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock

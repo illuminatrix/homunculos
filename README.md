@@ -46,7 +46,7 @@ Once the shell prompt (`>`) appears, you can type:
 | `greeting` | Print "hello" (tests syscall read/write from ring 3) |
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
-| `cmd1 \| cmd2` | Pipe output of cmd1 to input of cmd2 |
+| `env` | Print environment variables |
 
 Filesystem layout
 -----------------
