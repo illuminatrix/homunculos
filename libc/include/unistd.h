@@ -44,6 +44,9 @@ int unlink(const char *);
 int symlink(const char *, const char *);
 int readlink(const char *, char *, unsigned int);
 
+/* Environment */
+extern char **environ;
+
 /* Time */
 unsigned int sleep(unsigned int seconds);
 

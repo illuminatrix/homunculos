@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char **argv)
 {
-
 	const char *path = "/";
 	if (argc > 1)
 		path = argv[1];
@@ -18,6 +19,7 @@ int main(int argc, char **argv)
 		printf("cd: getcwd failed\n");
 		exit(1);
 	}
+	setenv("PWD", buf, 1);
 	printf("%s\n", buf);
 	return 0;
 }

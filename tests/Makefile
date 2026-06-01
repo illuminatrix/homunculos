@@ -3,7 +3,7 @@ KERNEL_DIR := $(TESTS_DIR)/..
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 SHELL_BIN := $(KERNEL_DIR)/shell/shell
 INIT_ELF := $(KERNEL_DIR)/init/init
-BIN_CMDS := shell/bin/poweroff shell/bin/greeting shell/bin/uname shell/bin/ls shell/bin/cat shell/bin/stat shell/bin/hello shell/bin/pwd shell/bin/cd shell/bin/touch shell/bin/write shell/bin/mkdir shell/bin/rm shell/bin/ln shell/bin/readlink shell/bin/sleep shell/bin/systime
+BIN_CMDS := shell/bin/poweroff shell/bin/greeting shell/bin/uname shell/bin/ls shell/bin/cat shell/bin/stat shell/bin/hello shell/bin/pwd shell/bin/cd shell/bin/touch shell/bin/write shell/bin/mkdir shell/bin/rm shell/bin/ln shell/bin/readlink shell/bin/sleep shell/bin/systime shell/bin/env
 BIN_CMDS := $(addprefix $(KERNEL_DIR)/,$(BIN_CMDS))
 DISK_IMG := $(TESTS_DIR)/ext2-disk.img
 
@@ -16,7 +16,7 @@ CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 \
 IOCTL_TEST_BIN := $(TESTS_DIR)/ioctl_test.elf
 PIPE_TEST_BIN := $(TESTS_DIR)/prepend.elf
 
-TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-ext2-write test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time
+TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-ext2-write test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time test-env
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
 DISK_TESTS := test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time
 
@@ -82,7 +82,7 @@ $(IOCTL_TEST_BIN): $(TESTS_DIR)/ioctl_test.c
 	@echo "LD  $@.o ->  $@"
 	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $(KERNEL_DIR)/libc/_start.o $@.o \
 		$(KERNEL_DIR)/libc/stdio/*.o $(KERNEL_DIR)/libc/string/*.o \
-		$(KERNEL_DIR)/libc/unistd/*.o
+		$(KERNEL_DIR)/libc/stdlib/*.o $(KERNEL_DIR)/libc/unistd/*.o
 	@rm -f $@.o
 
 $(PIPE_TEST_BIN): $(TESTS_DIR)/prepend.c
@@ -91,7 +91,7 @@ $(PIPE_TEST_BIN): $(TESTS_DIR)/prepend.c
 	@echo "LD  $@.o ->  $@"
 	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $(KERNEL_DIR)/libc/_start.o $@.o \
 		$(KERNEL_DIR)/libc/stdio/*.o $(KERNEL_DIR)/libc/string/*.o \
-		$(KERNEL_DIR)/libc/unistd/*.o
+		$(KERNEL_DIR)/libc/stdlib/*.o $(KERNEL_DIR)/libc/unistd/*.o
 	@rm -f $@.o
 
 test-ioctl: $(KERNEL_BIN) $(IOCTL_TEST_BIN) $(DISK_IMG)
@@ -108,6 +108,9 @@ test-waitpid: $(KERNEL_BIN) $(DISK_IMG)
 
 test-time: $(KERNEL_BIN) $(DISK_IMG)
 	@$(TESTS_DIR)/test-time.sh
+
+test-env: $(KERNEL_BIN) $(DISK_IMG)
+	@$(TESTS_DIR)/test-env.sh
 
 clean:
 	rm -f $(TESTS_DIR)/*.sock

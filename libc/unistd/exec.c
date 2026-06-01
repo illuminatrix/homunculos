@@ -12,12 +12,14 @@ int execve(const char *path, char *const argv[], char *const envp[])
 	return ret;
 }
 
+extern char **environ;
+
 int execv(const char *path, char *const argv[])
 {
-	return execve(path, argv, 0);
+	return execve(path, argv, environ);
 }
 
 int exec(const char *path)
 {
-	return execve(path, 0, 0);
+	return execve(path, 0, environ);
 }

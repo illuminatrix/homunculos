@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define SHELL_BUF_SIZE 64
@@ -96,8 +97,13 @@ static void shell_execute(char *buf)
 			const char *dir = "/";
 			if (argc > 1)
 				dir = argv[1];
-			if (chdir(dir) < 0)
+			if (chdir(dir) < 0) {
 				printf("cd: %s: failed\n", dir);
+				return;
+			}
+			char cwd[256];
+			if (getcwd(cwd, sizeof(cwd)) >= 0)
+				setenv("PWD", cwd, 1);
 			return;
 		}
 
@@ -183,6 +189,10 @@ static void shell_execute(char *buf)
 int main(void)
 {
 	char buf[SHELL_BUF_SIZE];
+	char cwd[256];
+
+	if (getcwd(cwd, sizeof(cwd)) >= 0)
+		setenv("PWD", cwd, 1);
 
 	while (1) {
 		shell_prompt();

@@ -10,6 +10,11 @@ extern "C" {
 __attribute__((__noreturn__))
 void abort(void);
 
+char *getenv(const char *name);
+int setenv(const char *name, const char *value, int overwrite);
+int putenv(char *string);
+int clearenv(void);
+
 #ifdef __cplusplus
 }
 #endif
