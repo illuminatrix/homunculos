@@ -65,7 +65,7 @@ cmdline_find_param(const char *cmdline, const char *key,
 static int
 load_elf_from_vfs(const char *path, const char *name,
 		  uint32_t **pdir_out, uint32_t *entry_out,
-		  uint32_t *brk_out)
+		  uint32_t *brk_out, uint32_t *user_esp_out)
 {
 	struct vfs_inode *ino = vfs_resolve_path(path);
 	uint32_t file_size;
@@ -133,6 +133,17 @@ load_elf_from_vfs(const char *path, const char *name,
 	asm volatile("mov %%cr3, %0" : "=r"(old_cr3));
 	asm volatile("mov %0, %%cr3" :: "r"(new_pdir));
 	elf_copy_segments((const struct elf32_ehdr *)elf_buf);
+
+	/* Set up minimal argc=0, argv=[NULL] on user stack */
+	{
+		uint32_t *usp = (uint32_t *)USER_STACK_TOP;
+		*(--usp) = 0;	/* envp terminator (NULL) */
+		*(--usp) = 0;	/* argv[0] = NULL */
+		*(--usp) = 0;	/* argc = 0 */
+		if (user_esp_out)
+			*user_esp_out = (uint32_t)usp;
+	}
+
 	asm volatile("mov %0, %%cr3" :: "r"(old_cr3));
 
 	if (brk_out)
@@ -143,7 +154,7 @@ load_elf_from_vfs(const char *path, const char *name,
 }
 
 static struct task *setup_main_task(uint32_t entry, uint32_t *pdir,
-				    uint32_t brk_start)
+				    uint32_t brk_start, uint32_t user_esp)
 {
 	struct task *t = task_alloc();
 	if (!t)
@@ -162,7 +173,7 @@ static struct task *setup_main_task(uint32_t entry, uint32_t *pdir,
 	t->pdir = pdir;
 	t->brk_start = brk_start;
 	t->program_break = brk_start;
-	task_update_context_user(t, entry, USER_STACK_TOP);
+	task_update_context_user(t, entry, user_esp);
 	scheduler_add_task(t);
 	return t;
 }
@@ -230,16 +241,19 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 			(const char *)mem_info_ptr->cmdline, "init",
 			init_buf, sizeof(init_buf));
 
+	uint32_t user_esp;
 	if (has_init) {
 		printf("init: %s\n", init_buf);
-		if (load_elf_from_vfs(init_buf, "init", &pdir, &entry, &brk) < 0)
+		if (load_elf_from_vfs(init_buf, "init", &pdir, &entry, &brk,
+				      &user_esp) < 0)
 			panic("init not found or invalid");
 	} else {
 		const char *defaults[] = {"/init", "/sbin/init", "/bin/sh"};
 		int found = 0;
 		for (int i = 0; i < 3; i++) {
 			if (load_elf_from_vfs(defaults[i], "init",
-					      &pdir, &entry, &brk) == 0) {
+					      &pdir, &entry, &brk,
+					      &user_esp) == 0) {
 				found = 1;
 				break;
 			}
@@ -249,7 +263,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	}
 
 	scheduler_init();
-	struct task *init_task = setup_main_task(entry, pdir, brk);
+	struct task *init_task = setup_main_task(entry, pdir, brk, user_esp);
 
 	/* Create a kernel waiter that blocks until init exits */
 	struct task *waiter = task_alloc();

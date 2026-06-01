@@ -2,17 +2,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-void _start(void)
+int main(int argc, char **argv)
 {
-	int argc;
-	char **argv;
-	asm volatile(
-		"movl 4(%%ebp), %0\n\t"
-		"leal 8(%%ebp), %1\n\t"
-		: "=r"(argc), "=r"(argv)
-		:
-		: "memory"
-	);
 
 	if (argc < 2) {
 		printf("usage: stat <path>\n");
@@ -26,5 +17,5 @@ void _start(void)
 	}
 	printf("ino=%d mode=%d size=%d\n",
 	       (int)st.st_ino, (int)st.st_mode, (int)st.st_size);
-	exit(0);
+	return 0;
 }

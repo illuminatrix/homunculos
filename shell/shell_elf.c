@@ -180,7 +180,7 @@ static void shell_execute(char *buf)
 		waitpid(pids[i], 0, 0);
 }
 
-void _start(void)
+int main(void)
 {
 	char buf[SHELL_BUF_SIZE];
 

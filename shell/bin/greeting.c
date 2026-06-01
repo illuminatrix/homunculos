@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void _start(void)
+int main(void)
 {
 	printf("hello\n");
-	exit(0);
+	return 0;
 }

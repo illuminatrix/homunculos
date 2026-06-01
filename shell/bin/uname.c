@@ -2,15 +2,15 @@
 #include <unistd.h>
 #include <sys/utsname.h>
 
-void _start(void)
+int main(void)
 {
 	struct utsname uts;
 	if (uname(&uts) < 0) {
 		printf("uname failed\n");
-		exit(1);
+		return 1;
 	}
 	printf("%s %s %s %s %s\n",
 	       uts.sysname, uts.nodename,
 	       uts.release, uts.version, uts.machine);
-	exit(0);
+	return 0;
 }

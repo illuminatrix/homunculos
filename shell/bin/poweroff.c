@@ -1,6 +1,7 @@
 #include <unistd.h>
 
-void _start(void)
+int main(void)
 {
 	reboot();
+	return 0;
 }

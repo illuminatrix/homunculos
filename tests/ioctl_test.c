@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <sys/termios.h>
 
-void _start(void)
+int main(void)
 {
 	struct termios t;
 	int ret;
@@ -25,5 +25,5 @@ void _start(void)
 	else
 		printf("fail: TCSETS=%d\n", ret);
 
-	exit(0);
+	return 0;
 }

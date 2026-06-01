@@ -1,6 +1,6 @@
 #include <unistd.h>
 
-void _start(void)
+int main(void)
 {
 	int pid = fork();
 	if (pid == 0) {

@@ -80,7 +80,7 @@ $(IOCTL_TEST_BIN): $(TESTS_DIR)/ioctl_test.c
 	@echo "CC  $<  ->  $@"
 	@$(CC) $(CFLAGS) -c -o $@.o $<
 	@echo "LD  $@.o ->  $@"
-	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $@.o \
+	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $(KERNEL_DIR)/libc/_start.o $@.o \
 		$(KERNEL_DIR)/libc/stdio/*.o $(KERNEL_DIR)/libc/string/*.o \
 		$(KERNEL_DIR)/libc/unistd/*.o
 	@rm -f $@.o
@@ -89,7 +89,7 @@ $(PIPE_TEST_BIN): $(TESTS_DIR)/prepend.c
 	@echo "CC  $<  ->  $@"
 	@$(CC) $(CFLAGS) -c -o $@.o $<
 	@echo "LD  $@.o ->  $@"
-	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $@.o \
+	@$(LD) -melf_i386 -Ttext 0x08048000 -e _start -s -o $@ $(KERNEL_DIR)/libc/_start.o $@.o \
 		$(KERNEL_DIR)/libc/stdio/*.o $(KERNEL_DIR)/libc/string/*.o \
 		$(KERNEL_DIR)/libc/unistd/*.o
 	@rm -f $@.o

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void _start(void)
+int main(void)
 {
 	char buf[256];
 	if (getcwd(buf, sizeof(buf)) < 0) {
@@ -9,5 +9,5 @@ void _start(void)
 		exit(1);
 	}
 	printf("%s\n", buf);
-	exit(0);
+	return 0;
 }

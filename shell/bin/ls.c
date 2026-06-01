@@ -2,17 +2,8 @@
 #include <unistd.h>
 #include <dirent.h>
 
-void _start(void)
+int main(int argc, char **argv)
 {
-	int argc;
-	char **argv;
-	asm volatile(
-		"movl 4(%%ebp), %0\n\t"
-		"leal 8(%%ebp), %1\n\t"
-		: "=r"(argc), "=r"(argv)
-		:
-		: "memory"
-	);
 
 	const char *path = ".";
 	if (argc > 1)
@@ -46,5 +37,5 @@ void _start(void)
 	printf("\n");
 
 	close(fd);
-	exit(0);
+	return 0;
 }

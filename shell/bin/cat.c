@@ -1,17 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void _start(void)
+int main(int argc, char **argv)
 {
-	int argc;
-	char **argv;
-	asm volatile(
-		"movl 4(%%ebp), %0\n\t"
-		"leal 8(%%ebp), %1\n\t"
-		: "=r"(argc), "=r"(argv)
-		:
-		: "memory"
-	);
 
 	char buf[128];
 	int n;
@@ -37,5 +28,5 @@ void _start(void)
 	buf[n] = '\0';
 	printf("%s\n", buf);
 	close(fd);
-	exit(0);
+	return 0;
 }

@@ -15,3 +15,4 @@ tests/*.elf
 shell/bin/*
 !shell/bin/*.c
 !shell/bin/Makefile.mk
+init/init

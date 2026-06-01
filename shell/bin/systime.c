@@ -2,9 +2,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-void _start(void)
+int main(void)
 {
 	time_t t = time(0);
 	printf("seconds=%d\n", (int)t);
-	exit(0);
+	return 0;
 }
