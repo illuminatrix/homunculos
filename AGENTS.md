@@ -292,6 +292,7 @@ make -C tests test-waitpid
 make -C tests test-time
 make -C tests test-env
 make -C tests test-signal
+make -C tests test-null
 
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock

@@ -98,6 +98,6 @@ Build (on Linux host, not in-kernel):
     Just alias to exit.
 
 [ ] reboot() with magic args   -- LINUX_REBOOT_MAGIC1/2
-[ ] /dev/null   -- writes discarded, reads return EOF
+[x] /dev/null   -- writes discarded, reads return EOF
 [ ] /dev/tty   -- symlink to current controlling terminal
 [x] environ / env vars in exec

@@ -43,10 +43,13 @@ Once the shell prompt (`>`) appears, you can type:
 | `uname` | Print kernel name, version, arch |
 | `sleep <seconds>` | Sleep for N seconds |
 | `systime` | Print seconds since boot |
+| `echo <args...>` | Print arguments to stdout |
 | `greeting` | Print "hello" (tests syscall read/write from ring 3) |
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
 | `env` | Print environment variables |
+| `kill <pid> <signum>` | Send a signal to a process |
+| `trap <signum> [kill]` | Test signal handling |
 | `kill <pid> <signum>` | Send a signal to a process |
 | `trap <signum>` | Catch a signal and print "CAUGHT" |
 
@@ -60,6 +63,7 @@ Filesystem layout
 /dev/kbd    -- PS/2 keyboard input
 /dev/vgaerr -- VGA stderr
 /dev/hello  -- tmpfs demo file ("hello fs")
+/dev/null   -- writes discarded, reads return EOF
 ```
 
 Disk image
@@ -104,6 +108,7 @@ make -C tests test-ext2
 make -C tests test-ext2-write
 make -C tests test-time
 make -C tests test-signal
+make -C tests test-null
 ```
 
 Clean

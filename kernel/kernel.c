@@ -14,6 +14,7 @@
 #include "part.h"
 #include "panic.h"
 #include "drivers/hello/hello.h"
+#include "drivers/null/null.h"
 #include "drivers/ata/ata.h"
 #include "gdt.h"
 
@@ -202,6 +203,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	/* Create device nodes in initial tmpfs /dev for early boot output */
 	vfs_create_device_nodes();
 	hello_driver_init();
+	null_driver_init();
 
 	welcome();
 	init_mm((mmap_entry_t *)mem_info_ptr->mmap_addr,

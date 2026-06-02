@@ -16,6 +16,7 @@
 #include "pipe.h"
 #include <dirent.h>
 #include "drivers/hello/hello.h"
+#include "drivers/null/null.h"
 #include "termios.h"
 #include "signal.h"
 
@@ -567,6 +568,7 @@ sys_mount(const char *source, const char *target, const char *fstype)
 	if (strcmp(fstype, "tmpfs") == 0 && strcmp(target, "/dev") == 0) {
 		vfs_create_device_nodes();
 		hello_driver_init();
+		null_driver_init();
 	}
 
 	return 0;

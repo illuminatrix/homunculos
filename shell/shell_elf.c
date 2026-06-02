@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 #define SHELL_BUF_SIZE 64
 #define CMD_ARGS_MAX 8
@@ -93,6 +94,25 @@ static void shell_execute(char *buf)
 		if (argc == 0)
 			return;
 
+		/* Parse output redirection (> file) */
+		char *redirect_out = 0;
+		for (int i = 0; argv[i]; i++) {
+			if (strcmp(argv[i], ">") == 0) {
+				if (!argv[i + 1]) {
+					printf("syntax error: expected filename after >\n");
+					return;
+				}
+				redirect_out = argv[i + 1];
+				int j = i;
+				while (argv[j + 2]) {
+					argv[j] = argv[j + 2];
+					j++;
+				}
+				argv[j] = 0;
+				break;
+			}
+		}
+
 		if (strcmp(argv[0], "cd") == 0) {
 			const char *dir = "/";
 			if (argc > 1)
@@ -113,8 +133,18 @@ static void shell_execute(char *buf)
 			return;
 		}
 
-		if (pid == 0)
+		if (pid == 0) {
+			if (redirect_out) {
+				int fd = open(redirect_out, O_WRONLY | O_CREAT | O_TRUNC);
+				if (fd < 0) {
+					printf("redirection failed: %s\n", redirect_out);
+					exit(1);
+				}
+				dup2(fd, 1);
+				close(fd);
+			}
 			exec_command(argv);
+		}
 
 		waitpid(pid, 0, 0);
 		return;
