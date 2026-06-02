@@ -47,4 +47,16 @@
 
 #define SYS_exit_group 252
 
+/* Reboot magic values (Linux-compatible) */
+#define LINUX_REBOOT_MAGIC1  0xfee1dead
+#define LINUX_REBOOT_MAGIC2  0x28121969
+#define LINUX_REBOOT_MAGIC2A 0x05121995
+#define LINUX_REBOOT_MAGIC2B 0x16041998
+#define LINUX_REBOOT_MAGIC2C 0x20112000
+
+#define LINUX_REBOOT_CMD_RESTART    0x01234567
+#define LINUX_REBOOT_CMD_POWER_OFF  0x4321fedc
+#define LINUX_REBOOT_CMD_RESTART2   0xa1b2c3d4
+#define LINUX_REBOOT_CMD_HALT       0xcdef0123
+
 #endif

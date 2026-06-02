@@ -24,7 +24,7 @@ int waitpid(int, int *, int);
 int mount(const char *, const char *, const char *);
 int unmount(const char *);
 int yield(void);
-int reboot(void);
+int reboot(int, int, int);
 int getpid(void);
 int getppid(void);
 int lseek(int, int, int);

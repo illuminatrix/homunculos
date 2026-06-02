@@ -281,10 +281,64 @@ sys_yield(void)
 	return 0;
 }
 
-int
-sys_reboot(void)
+static void halt(void)
 {
-	poweroff();
+	disable_interrupts();
+	while (1)
+		__asm__ volatile("hlt");
+}
+
+static void restart(void)
+{
+	disable_interrupts();
+
+	/* Pulse CPU reset line via keyboard controller */
+	while (in(0x64) & 2)
+		;
+	out(0x64, 0xFE);
+
+	/* Try ACPI reset */
+	out(0xCF9, 0x06);
+
+	/* Triple fault fallback */
+	{
+		struct {
+			uint16_t limit;
+			uint32_t base;
+		} __attribute__((packed)) null_idt = {0, 0};
+		__asm__ volatile("lidt %0" : : "m"(null_idt));
+		__asm__ volatile("int $3");
+	}
+
+	while (1)
+		__asm__ volatile("hlt");
+}
+
+int
+sys_reboot(int magic1, int magic2, int cmd)
+{
+	if (magic1 != LINUX_REBOOT_MAGIC1)
+		return -1;
+	if (magic2 != LINUX_REBOOT_MAGIC2 &&
+	    magic2 != LINUX_REBOOT_MAGIC2A &&
+	    magic2 != LINUX_REBOOT_MAGIC2B &&
+	    magic2 != LINUX_REBOOT_MAGIC2C)
+		return -1;
+
+	switch (cmd) {
+	case LINUX_REBOOT_CMD_POWER_OFF:
+		poweroff();
+		break;
+	case LINUX_REBOOT_CMD_RESTART:
+	case LINUX_REBOOT_CMD_RESTART2:
+		restart();
+		break;
+	case LINUX_REBOOT_CMD_HALT:
+		halt();
+		break;
+	default:
+		return -1;
+	}
 	return 0;
 }
 
