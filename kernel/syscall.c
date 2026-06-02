@@ -1051,6 +1051,7 @@ void
 syscall_init(void)
 {
 	systemcall_table[SYS_exit]        = (uint32_t)sys_exit;
+	systemcall_table[SYS_exit_group]  = (uint32_t)sys_exit;
 	systemcall_table[SYS_fork]        = (uint32_t)sys_fork;
 	systemcall_table[SYS_read]        = (uint32_t)sys_read;
 	systemcall_table[SYS_write]       = (uint32_t)sys_write;

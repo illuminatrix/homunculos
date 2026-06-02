@@ -45,4 +45,6 @@
 #define SYS_rt_sigreturn  173
 #define SYS_rt_sigprocmask 126
 
+#define SYS_exit_group 252
+
 #endif

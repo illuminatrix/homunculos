@@ -94,7 +94,7 @@ Build (on Linux host, not in-kernel):
 
 ===== P5: Misc / Nice-to-Have =====
 
-[ ] exit_group   -- SYS_exit_group (252)
+[x] exit_group   -- SYS_exit_group (252)
     Just alias to exit.
 
 [ ] reboot() with magic args   -- LINUX_REBOOT_MAGIC1/2
