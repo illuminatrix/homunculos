@@ -1,10 +1,10 @@
 #!/bin/bash
-# Test: tmpfs filesystem via ls and cat shell commands
+# Test: devtmpfs filesystem via ls and cat shell commands
 source "$(dirname "$0")/helpers.sh"
 
 check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
-echo "=== tmpfs Filesystem Test ==="
+echo "=== devtmpfs Filesystem Test ==="
 echo "  Subtest 1: Shell prompt '>' appears after boot"
 echo "  Subtest 2: 'ls' shows 'dev' in root"
 echo "  Subtest 3: 'ls /dev' shows 'hello'"

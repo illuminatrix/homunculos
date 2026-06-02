@@ -68,7 +68,7 @@ Build (on Linux host, not in-kernel):
     could just return 0 if the inode exists.
 
 [x] mkdir/rmdir   -- SYS_mkdir (39), SYS_rmdir (40)
-    Delegate to vfs_inode_ops->add_entry (tmpfs, ext2).
+    Delegate to vfs_inode_ops->add_entry (devtmpfs, ext2).
 
 [x] unlink   -- SYS_unlink (87)
     Same dependency.

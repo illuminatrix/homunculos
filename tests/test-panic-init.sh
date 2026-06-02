@@ -19,7 +19,7 @@ trap cleanup EXIT INT TERM
 
 # Start QEMU with root= but without init= and without a disk
 # The kernel mounts ext2 (fails, no disk) then tries/init,/sbin/init,/bin/sh
-# on the tmpfs root — none exist → panic
+# on the devtmpfs root — none exist → panic
 qemu-system-i386 -kernel "$KERNEL_BIN" \
 	-display none \
 	-monitor "unix:${MONITOR_SOCK},server,nowait" \

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test: ext2 filesystem mounted at root /, tmpfs at /dev
+# Test: ext2 filesystem mounted at root /, devtmpfs at /dev
 source "$(dirname "$0")/helpers.sh"
 
 check_deps qemu-system-i386 socat || exit 1

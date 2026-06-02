@@ -7,7 +7,7 @@ check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 echo "=== stat/fstat/lstat Test ==="
 echo "  Subtest 1: Boot + shell prompt"
 echo "  Subtest 2: stat / (root directory)"
-echo "  Subtest 3: stat /dev (tmpfs dir)"
+echo "  Subtest 3: stat /dev (devtmpfs dir)"
 echo "  Subtest 4: stat /dev/hello (device node)"
 echo "  Subtest 5: poweroff (regression)"
 
@@ -54,7 +54,7 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- Subtest 3: stat /dev (tmpfs directory) ---
+# --- Subtest 3: stat /dev (devtmpfs directory) ---
 send_keys "stat /dev" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1

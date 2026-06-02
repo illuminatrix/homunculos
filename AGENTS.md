@@ -48,7 +48,7 @@ _start (arch/i386/kernel_head.S)
      3. load_idt()             -- 255-entry IDT, DPL=3 for 0x31 (yield) & 0x80 (syscall)
      4. vfs_init()             -- iterate .driver_init, init VGA + PS/2
      5. vfs_inode_init()       -- init VFS inode pool
-     6. tmpfs_init()           -- bootstrap tmpfs root inode, create /dev + /mnt dirs
+     6. devtmpfs_init()           -- bootstrap devtmpfs root inode, create /dev + /mnt dirs
      7. vfs_create_device_nodes() + hello_driver_init()
                                -- populate bootstrap /dev (needed for early printf)
      8. welcome()              -- printf("Illuminatrix Kernel!\n")
@@ -58,10 +58,10 @@ _start (arch/i386/kernel_head.S)
     12. ext2_mount(block_dev)  -- mount ext2 from detected block device
     13. vfs_mount_create(vfs_root_inode(), ext2_root)
                                -- mount ext2 at /
-    14. vfs_resolve_path("/dev") -> tmpfs_create_mount() -> vfs_mount_create()
-                               -- mount tmpfs at /dev
+    14. vfs_resolve_path("/dev") -> devtmpfs_create_mount() -> vfs_mount_create()
+                               -- mount devtmpfs at /dev
     15. vfs_create_device_nodes() + hello_driver_init() (2nd call)
-                               -- populate final tmpfs /dev
+                               -- populate final devtmpfs /dev
     16. scheduler_init()       -- PIT at 100Hz, callback = scheduler_tick
     17. setup_main_task(...)   -- create shell task (user context), fds via /dev/kbd/vga/vgaerr
     18. pic_enable_irq(0)      -- timer
@@ -181,7 +181,7 @@ struct file { const struct vfs_ops *ops; void *private_data; };
 - Drivers set global `vfs_stdin`/`vfs_stdout`/`vfs_stderr` during init
 - Accessor functions: `vfs_get_stdin()`, `vfs_get_stdout()`, `vfs_get_stderr()`
 - Each task has `fd_table[16]` — copied on fork; default: 0=stdin, 1=stdout, 2=stderr
-- VFS mount layer: flat array `mounts[VFS_MAX_MOUNTS=8]`. Mounted as: ext2 at root `/`, tmpfs at `/dev`
+- VFS mount layer: flat array `mounts[VFS_MAX_MOUNTS=8]`. Mounted as: ext2 at root `/`, devtmpfs at `/dev`
 - `vfs_inode` struct (in `kernel/vfs.h`): `{ i_no, i_size, i_type, ops, private_data }`
 - Inode pool: static array of 256 inodes (`VFS_MAX_INODES`)
 - File operations go through `vfs_open_file(inode)` which wraps an inode as a `struct file`
@@ -280,7 +280,7 @@ make -C tests test-shell
 make -C tests test-usermode
 make -C tests test-mmap
 make -C tests test-multiboot
-make -C tests test-tmpfs
+make -C tests test-devtmpfs
 make -C tests test-ext2
 make -C tests test-ext2-write
 make -C tests test-stat

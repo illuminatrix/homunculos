@@ -1,7 +1,7 @@
 Illuminatrix
 ============
 
-A minimal i386 (32-bit) kernel with ext2 filesystem, tmpfs, ATA PIO, PS/2
+A minimal i386 (32-bit) kernel with ext2 filesystem, devtmpfs, ATA PIO, PS/2
 keyboard, VGA text-mode display, multitasking, ELF execution, and an
 interactive shell — all running on bare metal in QEMU.
 
@@ -58,11 +58,11 @@ Filesystem layout
 
 ```
 /           -- ext2 (read/write, from disk.img)
-/dev        -- tmpfs (writable, populated at boot)
+/dev        -- devtmpfs (writable, populated at boot)
 /dev/vga    -- VGA text-mode output
 /dev/kbd    -- PS/2 keyboard input
 /dev/vgaerr -- VGA stderr
-/dev/hello  -- tmpfs demo file ("hello fs")
+/dev/hello  -- devtmpfs demo file ("hello fs")
 /dev/null   -- writes discarded, reads return EOF
 ```
 
@@ -103,7 +103,7 @@ make -C tests test-shell
 make -C tests test-usermode
 make -C tests test-mmap
 make -C tests test-multiboot
-make -C tests test-tmpfs
+make -C tests test-devtmpfs
 make -C tests test-ext2
 make -C tests test-ext2-write
 make -C tests test-time

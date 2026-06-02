@@ -12,7 +12,7 @@
 #include "pio.h"
 #include "block.h"
 #include "ext2.h"
-#include "tmpfs.h"
+#include "devtmpfs.h"
 #include "pipe.h"
 #include <dirent.h>
 #include "drivers/hello/hello.h"
@@ -608,8 +608,8 @@ sys_mount(const char *source, const char *target, const char *fstype)
 		if (!fs_root)
 			return -1;
 		printf("ext2: mounted at %s\n", target);
-	} else if (strcmp(fstype, "tmpfs") == 0) {
-		fs_root = tmpfs_create_mount();
+	} else if (strcmp(fstype, "devtmpfs") == 0) {
+		fs_root = devtmpfs_create_mount();
 		if (!fs_root)
 			return -1;
 	} else {
@@ -619,8 +619,8 @@ sys_mount(const char *source, const char *target, const char *fstype)
 	if (!vfs_mount_create(target_inode, fs_root))
 		return -1;
 
-	/* Re-populate device nodes when tmpfs is mounted at /dev */
-	if (strcmp(fstype, "tmpfs") == 0 && strcmp(target, "/dev") == 0) {
+	/* Re-populate device nodes when devtmpfs is mounted at /dev */
+	if (strcmp(fstype, "devtmpfs") == 0 && strcmp(target, "/dev") == 0) {
 		vfs_create_device_nodes();
 		hello_driver_init();
 		null_driver_init();

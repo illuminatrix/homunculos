@@ -10,7 +10,7 @@
 #include "task.h"
 #include "vfs.h"
 #include "elf.h"
-#include "tmpfs.h"
+#include "devtmpfs.h"
 #include "part.h"
 #include "panic.h"
 #include "drivers/hello/hello.h"
@@ -199,9 +199,9 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	load_idt();
 	vfs_init();
 	vfs_inode_init();
-	tmpfs_init();
+	devtmpfs_init();
 
-	/* Create device nodes in initial tmpfs /dev for early boot output */
+	/* Create device nodes in initial devtmpfs /dev for early boot output */
 	vfs_create_device_nodes();
 	hello_driver_init();
 	null_driver_init();
@@ -235,7 +235,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	/* Mount root at / via mount syscall */
 	extern int sys_mount(const char *, const char *, const char *);
 	sys_mount(root_buf, "/", "ext2");
-	sys_mount(0, "/dev", "tmpfs");
+	sys_mount(0, "/dev", "devtmpfs");
 
 	/* Parse init= from bootloader command line, or try defaults */
 	char init_buf[64];

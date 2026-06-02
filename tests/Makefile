@@ -17,9 +17,9 @@ IOCTL_TEST_BIN := $(TESTS_DIR)/ioctl_test.elf
 PIPE_TEST_BIN := $(TESTS_DIR)/prepend.elf
 SIGNAL_TEST_BIN := $(TESTS_DIR)/signal_test.elf
 
-TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-ext2-write test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time test-env test-signal test-null
+TEST_SCRIPTS := test-multiboot test-boot test-panic test-panic-init test-vga test-shell test-usermode test-mmap test-exec test-devtmpfs test-ext2 test-ext2-write test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time test-env test-signal test-null
 TEST_SH := $(addprefix $(TESTS_DIR)/,$(addsuffix .sh,$(TEST_SCRIPTS)))
-DISK_TESTS := test-vga test-shell test-usermode test-mmap test-exec test-tmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time test-signal test-null
+DISK_TESTS := test-vga test-shell test-usermode test-mmap test-exec test-devtmpfs test-ext2 test-stat test-execv test-chdir test-ioctl test-pipe test-waitpid test-time test-signal test-null
 
 .PHONY: all test $(TEST_SCRIPTS) clean
 
@@ -62,8 +62,8 @@ test-mmap: $(KERNEL_BIN) $(DISK_IMG)
 test-exec: $(KERNEL_BIN) $(DISK_IMG)
 	@$(TESTS_DIR)/test-exec.sh
 
-test-tmpfs: $(KERNEL_BIN) $(DISK_IMG)
-	@$(TESTS_DIR)/test-tmpfs.sh
+test-devtmpfs: $(KERNEL_BIN) $(DISK_IMG)
+	@$(TESTS_DIR)/test-devtmpfs.sh
 
 test-ext2: $(KERNEL_BIN) $(DISK_IMG)
 	@$(TESTS_DIR)/test-ext2.sh
