@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include "drivers/hello/hello.h"
 #include "drivers/null/null.h"
+#include "drivers/tty/tty.h"
 #include "termios.h"
 #include "signal.h"
 
@@ -569,6 +570,7 @@ sys_mount(const char *source, const char *target, const char *fstype)
 		vfs_create_device_nodes();
 		hello_driver_init();
 		null_driver_init();
+		tty_driver_init();
 	}
 
 	return 0;
