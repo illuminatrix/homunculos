@@ -136,16 +136,16 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 21 | SYS_mount | `sys_mount` | `int sys_mount(const char *source, const char *target, const char *fstype)` |
 | 22 | SYS_umount | `sys_unmount` | `int sys_unmount(const char *target)` |
 | 13 | SYS_time | `sys_time` | `int sys_time(int32_t *tloc)` |
-| 24 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |
+| 158 | SYS_sched_yield | `sys_yield` | `int sys_yield(void)` |
 | 64 | SYS_getppid | `sys_getppid` | `int sys_getppid(void)` |
 | 78 | SYS_gettimeofday | `sys_gettimeofday` | `int sys_gettimeofday(struct k_timeval *tv, void *tz)` |
 | 162 | SYS_nanosleep | `sys_nanosleep` | `int sys_nanosleep(struct k_timespec *req, struct k_timespec *rem)` |
-| 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(void)` |
+| 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(int magic1, int magic2, int cmd)` |
 | 122 | SYS_uname | `sys_uname` | `int sys_uname(struct utsname *buf)` |
 | 37 | SYS_kill | `sys_kill` | `int sys_kill(int pid, int sig)` |
 | 48 | SYS_signal | `sys_signal` | `int sys_signal(int signum, void (*handler)(int))` |
-| 67 | SYS_rt_sigaction | `sys_rt_sigaction` | `int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)` |
-| 126 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
+| 174 | SYS_rt_sigaction | `sys_rt_sigaction` | `int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)` |
+| 175 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
 | 173 | SYS_rt_sigreturn | `sys_rt_sigreturn` | `int sys_rt_sigreturn(void)` |
 
 Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.

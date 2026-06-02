@@ -4,7 +4,7 @@ int yield(void)
 	asm volatile(
 		"int $0x80"
 		: "=a"(ret)
-		: "0"(24)
+		: "0"(158)
 		: "ebx", "ecx", "edx", "memory");
 	return ret;
 }

@@ -7,97 +7,117 @@ Build (on Linux host, not in-kernel):
   CROSS_COMPILE=i686-elf- make defconfig toybox
   Build statically against musl; our ELF loader handles the result.
 
-===== P0: Blocking (most commands fail without these) =====
+===== DONE: All P0-P5 prerequisites =====
 
-[x] brk/sbrk   -- per-task heap via syscall.     kernel/syscall.c
-    Need a writable region in the page directory, task-local break addr.
+[x] brk/sbrk, stat/fstat/lstat, getdents, ioctl, chdir/getcwd
+[x] getpid/getppid, lseek, uname
+[x] pipe, dup2, waitpid options, exec with argv/envp
+[x] ext2 write, open() flags, access, mkdir/rmdir, unlink, symlink/readlink
+[x] kill, signal/sigaction, SIGINT, SIGCHLD, sigreturn
+[x] gettimeofday, time, nanosleep
+[x] exit_group, reboot() magic args, /dev/null, /dev/tty, environ
 
-[x] stat/fstat/lstat   -- SYS_stat (106), SYS_fstat (108), SYS_lstat (107)
-    Define struct stat (i386), expose inode metadata (size, type, mtime)
-    through VFS inode ops.  syscall.c
+===== P6: Syscall numbering fix (must fix before musl works) =====
 
-[x] getdents (i386 SYS_getdents=141)   -- SYS_getdents64 (220)
-    Directory read returns space-separated names via read(fd); toybox
-    expects struct linux_dirent64.  Need a real getdents syscall that
-    iterates vfs_inode_ops->readdir.  kernel/syscall.c + vfs
+[ ] Fix syscall numbers to match Linux i386:
+    sched_yield:  24 -> 158  (Linux 158)
+    unlink:       87 -> 10   (Linux 10)
+    rt_sigaction: 67 -> 174  (Linux 174)
+    rt_sigprocmask: 126 -> 175 (Linux 175)
+    Status: DONE in syscall.h, libc wrappers, dispatch table -- verify.
 
-[x] ioctl    -- SYS_ioctl (54)
-    At minimum TCGETS/TCSETS for terminal control (echo, line buffering,
-    signal chars).  VGA text driver and PS/2 kbd driver need ioctl
-    handlers.
+===== P7: Critical missing syscalls (musl stdio/process) =====
 
-[x] chdir/getcwd   -- SYS_chdir (12), SYS_getcwd (183)
-    Add cwd buffer to task struct, resolve relative paths using
-    cwd prepend + normalize_path helper in syscall.c.  kernel/syscall.c + vfs
+[ ] mmap2     -- SYS_mmap2 (192).  musl malloc, ELF loading, shared mem.
+    Allocate frames + map at requested VA.  Needed for brk fallback
+    and mmap(PROT_NONE) guard pages.
+[ ] munmap    -- SYS_munmap (91).  Free mapped pages.
+[ ] mprotect  -- SYS_mprotect (125).  Stack guard pages, RELRO.
+[ ] readv     -- SYS_readv (145).  musl __stdio_read() (buffered stdin).
+[ ] writev    -- SYS_writev (146).  musl __stdio_write() (buffered stdout).
+    Both: iterate iovec array, call vfs_write/read per segment.
+[ ] fcntl64   -- SYS_fcntl64 (221).  F_SETFD, F_GETFD, F_SETFL (non-block),
+    F_DUPFD.  Used by almost everything.
+[ ] poll      -- SYS_poll (168).  Toybox xpoll(), scan_key(), pollinate().
+    Block on multiple fds with timeout.  Stub: always return 1 fd ready.
+[ ] clock_gettime -- SYS_clock_gettime (265).  musl timing, Toybox
+    millitime().  CLOCK_REALTIME + CLOCK_MONOTONIC from PIT tick count.
+[ ] getuid32  -- SYS_getuid32 (199).  getuid(), id command, permissions.
+    Stub: return 0.
+[ ] geteuid32 -- SYS_geteuid32 (201).  Stub: return 0.
+[ ] getgid32  -- SYS_getgid32 (200).  Stub: return 0.
+[ ] getegid32 -- SYS_getegid32 (202).  Stub: return 0.
+[ ] set_tid_address -- SYS_set_tid_address (258).  musl _Fork() needs this.
+    Stub: store pointer, return 0 / current PID.
+[ ] futex     -- SYS_futex (240).  musl thread sync (__wait/__wake).
+    Stub: always return 0 (no actual blocking).
 
-[x] getpid/getppid   -- SYS_getpid (20), SYS_getppid (64)
-    Trivial: read from scheduler_get_current()->pid / parent_pid.
+===== P8: Standard POSIX syscalls (many commands need these) =====
 
-[x] lseek   -- SYS_lseek (19)
-    VFS file struct already tracks f_pos.  Add syscall to set it.
+[ ] rename    -- SYS_rename (38).  mv, cp, install.
+[ ] chmod     -- SYS_chmod (15).  chmod command, file perms.
+[ ] fchmod    -- SYS_fchmod (94).  copy_tempfile().
+[ ] setsid    -- SYS_setsid (66).  xvdaemon(), setsid command.
+[ ] setpgid   -- SYS_setpgid (57).  Job control.
+[ ] umask     -- SYS_umask (60).  mkdir -m, file creation modes.
+[ ] vfork     -- SYS_vfork (190).  musl vfork(), Toybox XVFORK macro.
+[ ] utimensat -- SYS_utimensat (320).  touch, cp -p, install.
+[ ] statfs64  -- SYS_statfs64 (268).  df command, xgetmountlist().
+[ ] fstatfs64 -- SYS_fstatfs64 (269).  mount list infrastructure.
+[ ] ftruncate64 -- SYS_ftruncate64 (194).  cp, dd, truncation.
+[ ] link      -- SYS_link (9).  ln hard links.
+[ ] mknod     -- SYS_mknod (14).  mknod command.
+[ ] sync      -- SYS_sync (36).  sync command.
+[ ] fsync     -- SYS_fsync (118).  File sync.
 
-[x] uname   -- SYS_uname (122)
-    Return fixed struct utsname (i686, illuminatrix, ...).
+===== P9: *at syscalls (dirtree.c traversal) =====
 
-===== P1: Pipeline / Shell (for a usable shell) =====
+[ ] openat    -- SYS_openat (295).  dirtree.c directory traversal.
+[ ] readlinkat -- SYS_readlinkat (305).  xreadlinkat().
+[ ] fstatat64 -- SYS_fstatat64 (300).  dirtree_add_node() stat calls.
+[ ] mkdirat   -- SYS_mkdirat (296).  mkpathat().
+[ ] unlinkat  -- SYS_unlinkat (301).  delete_tempfile().
+[ ] renameat  -- SYS_renameat (302).  Directory-level rename.
+[ ] fchmodat  -- SYS_fchmodat (306).  wfchmodat().
 
-[x] pipe    -- SYS_pipe (42)
-    Circular buffer, blocking read/write, per-pipe static pool.
-    See kernel/pipe.c, drivers/pipe/ (sys_pipe + sys_dup2).
+===== P10: Networking (netcat, telnet, wget, ifconfig) =====
 
-[x] dup2   -- SYS_dup2 (63)
-    fd table copy via refcounted file structs.  Needed for pipe redirection.
+[ ] socketcall -- SYS_socketcall (102) or individual socket syscalls.
+    At minimum: socket (359), bind (361), connect (362), listen (363),
+    accept4 (364), sendto (369), recvfrom (371), shutdown (373),
+    setsockopt (366), getsockopt (365), getsockname (367),
+    getpeername (368), sendmsg (370), recvmsg (372).
 
-[x] waitpid options   -- pid==-1 (any), pid==child_pid, WNOHANG
-    WNOHANG=1: return 0 if no child exited, else block.
-    pid>0: wait for specific child.  kernel/task.c
+===== P11: /proc filesystem =====
 
-[x] exec with argv/envp   -- SYS_execve with argv/envp via sys_exec.
-    Test: `run /bin/hello` prints "hello from exec".  kernel/syscall.c
+[ ] Minimal procfs mounted at /proc.
+    At minimum:
+      /proc/self/exe    -- symlink to running executable
+      /proc/PID/cmdline -- command line args
+      /proc/PID/exe     -- symlink to executable
+      /proc/mounts      -- mount table
+      /proc/uptime      -- system uptime
+      /proc/stat        -- CPU stats
+    Needed by: ps, killall, pidof, pgrep, mount, df, uptime, top.
 
-===== P2: VFS / Filesystem Improvements =====
+===== P12: TLS / Threading =====
 
-[x] ext2 write support   -- inode_ops->write, add_entry
-    ext2 is read/write; create, mkdir, symlink, readlink, unlink, access all work.
+[ ] set_thread_area  -- SYS_set_thread_area (243).  musl TLS via %gs.
+    Option A: implement set_thread_area (needs LDT support).
+    Option B: build musl with -DSYSCALL_NO_TLS (loses threading).
+    Option C: use GDT entry for per-task TLS (simpler, 1 task at a time).
 
-[x] open() flags   -- O_CREAT, O_TRUNC, O_RDWR, O_WRONLY
-    Currently ignores flags param.  kernel/syscall.c
+===== P13: Nice-to-have =====
 
-[x] access   -- SYS_access (33)
-    Check file existence / mode.  Kernel currently has no permission model;
-    could just return 0 if the inode exists.
-
-[x] mkdir/rmdir   -- SYS_mkdir (39), SYS_rmdir (40)
-    Delegate to vfs_inode_ops->add_entry (devtmpfs, ext2).
-
-[x] unlink   -- SYS_unlink (87)
-    Same dependency.
-
-[x] symlink/readlink   -- SYS_symlink (83), SYS_readlink (85)
-    VFS needs a VFS_ISYMLINK type.
-
-===== P3: Signals (hard, deferrable) =====
-
-[x] kill   -- SYS_kill (37)
-[x] signal/sigaction   -- SYS_signal (48), SYS_rt_sigaction (67)
-[x] SIGINT (Ctrl+C) from keyboard driver
-[x] SIGCHLD on child exit
-[x] sigreturn
-
-===== P4: Time (needed for timestamps, sleep) =====
-
-[x] gettimeofday   -- SYS_gettimeofday (78)
-    Read PIT tick count, convert to seconds+usec.
-
-[x] time   -- SYS_time (13)
-[x] nanosleep   -- SYS_nanosleep (162)
-
-===== P5: Misc / Nice-to-Have =====
-
-[x] exit_group   -- SYS_exit_group (252)
-    Just alias to exit.
-
-[ ] reboot() with magic args   -- LINUX_REBOOT_MAGIC1/2
-[x] /dev/null   -- writes discarded, reads return EOF
-[ ] /dev/tty   -- symlink to current controlling terminal
-[x] environ / env vars in exec
+[ ] getrandom  -- SYS_getrandom (355).  xgetrandom() prefers this;
+    fallback to /dev/urandom OK.
+[ ] sendfile64 -- SYS_sendfile64 (239).  Optimization for cp/dd.
+[ ] getrusage  -- SYS_getrusage (77).  time command.
+[ ] times      -- SYS_times (43).  times command.
+[ ] alarm      -- SYS_alarm (27).  alarm().
+[ ] sigaltstack -- SYS_sigaltstack (186).  SA_ONSTACK signal handling.
+[ ] personality -- SYS_personality (136).  Exec personality.
+[ ] prctl      -- SYS_prctl (172).  Process control.
+[ ] truncate64 -- SYS_truncate64 (193).  File truncation.
+[ ] dup3       -- SYS_dup3 (330).  Modern dup with cloexec.
+[ ] pipe2      -- SYS_pipe2 (331).  Modern pipe with cloexec.

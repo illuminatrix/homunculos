@@ -15,7 +15,7 @@
 #define SYS_getpid     20
 #define SYS_mount      21
 #define SYS_umount     22
-#define SYS_sched_yield 24
+#define SYS_sched_yield 158
 #define SYS_access     33
 #define SYS_mkdir      39
 #define SYS_rmdir      40
@@ -25,7 +25,7 @@
 #define SYS_getppid    64
 #define SYS_symlink    83
 #define SYS_readlink   85
-#define SYS_unlink     87
+#define SYS_unlink     10
 #define SYS_reboot     88
 #define SYS_stat      106
 #define SYS_lstat     107
@@ -41,9 +41,9 @@
 /* Signal syscalls */
 #define SYS_kill      37
 #define SYS_signal    48
-#define SYS_rt_sigaction   67
+#define SYS_rt_sigaction   174
 #define SYS_rt_sigreturn  173
-#define SYS_rt_sigprocmask 126
+#define SYS_rt_sigprocmask 175
 
 #define SYS_exit_group 252
 
