@@ -30,7 +30,7 @@ QEMU_CMD := qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=r
 kernel.bin: $(OBJS)
 	cd libc && make
 	@echo "LD $^    ->    $@"
-	$(LD) -T arch/$(ARCH)/kernel.ld -melf_i386 -o $@ libc/stdio/*.o libc/string/*.o libc/unistd/*.o $^
+	$(LD) -T arch/$(ARCH)/kernel.ld -melf_i386 -o $@ libc/stdio/*.o libc/string/*.o libc/unistd/*.o libc/stdlib/*.o $^
 
 debug: kernel.bin
 	$(OBJDUMP) -lSdx kernel.bin > kernel.lst

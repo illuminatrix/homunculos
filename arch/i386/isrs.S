@@ -4,12 +4,16 @@
 .global isr_\vector
 isr_\vector:
         pushal
-        mov $(\vector), %eax # push interrupt vector number to save state of which interrupt was triggered
-        pushl %eax
+        # error code is at [esp + 32] (above pushal), iret frame at [esp + 36]
+        lea 36(%esp), %ebx      # ebx = pointer to iret frame
+        pushl %ebx              # push iret frame (rightmost, pushed first)
+        mov $(\vector), %eax
+        pushl %eax              # push vector number
         call common_handler_error_code
-        addl $4, %esp        # discard error code pushed by the cpu hw
+        addl $8, %esp           # pop both params
+        addl $4, %esp           # discard error code pushed by cpu hw
         popal
-        addl $4, %esp        # discard interrupt vector number
+        addl $4, %esp           # discard interrupt vector number
         iretl
 .endm
 
@@ -17,10 +21,12 @@ isr_\vector:
 .global isr_\vector
 isr_\vector:
         pushal
-        mov $(\vector), %eax # push interrupt vector number to save state of which interrupt was triggered
-        pushl %eax
+        lea 32(%esp), %ebx      # ebx = pointer to iret frame
+        pushl %ebx              # push iret frame (rightmost)
+        mov $(\vector), %eax
+        pushl %eax              # push vector number
         call common_handler
-        addl $4, %esp        # discard interrupt vector number
+        addl $8, %esp           # pop both params
         popal
         iretl
 .endm
@@ -64,10 +70,13 @@ ISR                  31
 irq_\irq_no:
         cld
 	pushal
-	mov $(\irq_no), %eax # push interrupt vector number to save state of which interrupt was triggered
-	pushl %eax
+	mov %esp, %ecx          # ecx = pointer to edi (after pushal)
+	lea 32(%ecx), %ebx      # ebx = pointer to iret frame (eip)
+	mov $(\irq_no), %eax    # irq number
+	pushl %ebx              # push iret frame pointer (2nd param)
+	pushl %eax              # push irq number (1st param)
 	call irq_handler
-	addl $4, %esp        # discard interrupt vector number
+	addl $8, %esp           # pop both params
         cli
 	popal
 	iretl
@@ -96,6 +105,14 @@ syscall_handler:
 	pushl %ecx # param 2
 	pushl %ebx # param 1
 	call *systemcall_table(,%eax,4) # call systemcall function position %eax moving 4 bytes
+	# Check for pending signals before returning to user mode
+	# iret frame (eip/cs/eflags/uesp/ss) is at %esp + 12
+	lea 12(%esp), %ebx      # ebx = pointer to iret frame
+	pushl %eax              # save syscall return value
+	pushl %ebx              # push iret frame pointer
+	call signal_check_and_deliver
+	addl $4, %esp           # pop pointer
+	popl %eax               # restore return value (may be unused if signal delivered)
 	add $12, %esp # cleaning stack
 	# return is available in %eax
 	iretl

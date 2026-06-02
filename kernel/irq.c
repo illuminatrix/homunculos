@@ -1,4 +1,5 @@
 #include "irq.h"
+#include "signal.h"
 #include "pio.h"
 
 #define PIC1_CMD 0x20
@@ -16,7 +17,7 @@ uint8_t irq_request(uint8_t irq, irq_handler_t handler)
     return IRQ_REQUEST_ERROR_OK;
 }
 
-void irq_handler(uint8_t irq)
+void irq_handler(uint8_t irq, struct iret_frame *frame)
 {
     if (irq >= 32)
         return;
@@ -27,4 +28,7 @@ void irq_handler(uint8_t irq)
     if (irq >= 8)
         out(PIC2_CMD, PIC_EOI);
     out(PIC1_CMD, PIC_EOI);
+
+    /* Check for pending signals after dispatching IRQ */
+    signal_check_and_deliver(frame);
 }

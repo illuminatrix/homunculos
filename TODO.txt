@@ -78,11 +78,11 @@ Build (on Linux host, not in-kernel):
 
 ===== P3: Signals (hard, deferrable) =====
 
-[ ] kill   -- SYS_kill (37)
-[ ] signal/sigaction   -- SYS_signal (48), SYS_rt_sigaction (67)
-[ ] SIGINT (Ctrl+C) from keyboard driver
-[ ] SIGCHLD on child exit
-[ ] sigreturn
+[x] kill   -- SYS_kill (37)
+[x] signal/sigaction   -- SYS_signal (48), SYS_rt_sigaction (67)
+[x] SIGINT (Ctrl+C) from keyboard driver
+[x] SIGCHLD on child exit
+[x] sigreturn
 
 ===== P4: Time (needed for timestamps, sleep) =====
 

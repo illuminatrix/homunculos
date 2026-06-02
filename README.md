@@ -47,6 +47,8 @@ Once the shell prompt (`>`) appears, you can type:
 | `run <path>` | Fork and exec an ELF binary (e.g. `run /bin/hello`), child prints binary output, parent prints "exec: child N done" |
 | `poweroff` | Shut down the VM |
 | `env` | Print environment variables |
+| `kill <pid> <signum>` | Send a signal to a process |
+| `trap <signum>` | Catch a signal and print "CAUGHT" |
 
 Filesystem layout
 -----------------
@@ -100,6 +102,8 @@ make -C tests test-multiboot
 make -C tests test-tmpfs
 make -C tests test-ext2
 make -C tests test-ext2-write
+make -C tests test-time
+make -C tests test-signal
 ```
 
 Clean

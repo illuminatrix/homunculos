@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include "idt.h"
 #include "interrupt.h"
+#include "signal.h"
+#include "task.h"
+#include "scheduler.h"
+#include "gdt.h"
 
 #define VECTORS 255
 
@@ -91,15 +95,53 @@ void load_idt(void)
     enable_interrupts();
 }
 
-void common_handler_error_code(struct context_w_error context)
+/* Translate CPU exception vector to signal number */
+static int exception_to_signal(uint32_t vector)
 {
+	switch (vector) {
+	case 0:  return SIGFPE;   /* divide error */
+	case 4:  return SIGILL;   /* overflow */
+	case 5:  return SIGSEGV;  /* bound range exceeded */
+	case 6:  return SIGILL;   /* invalid opcode */
+	case 8:  return SIGSEGV;  /* double fault */
+	case 11: return SIGSEGV;  /* segment not present */
+	case 12: return SIGSEGV;  /* stack segment fault */
+	case 13: return SIGSEGV;  /* general protection */
+	case 14: return SIGSEGV;  /* page fault */
+	case 16: return SIGFPE;   /* FPU error */
+	case 17: return SIGSEGV;  /* alignment check */
+	case 19: return SIGFPE;   /* SIMD exception */
+	default: return SIGTERM;
+	}
+}
+
+void common_handler_error_code(uint32_t vector, struct iret_frame *frame)
+{
+	struct task *current = scheduler_get_current();
+	int from_user = (frame->cs == GDT_USER_CODE);
+
+	if (current && current->is_user && from_user) {
+		int sig = exception_to_signal(vector);
+		current->pending_signals |= (1 << (sig - 1));
+		signal_check_and_deliver(frame);
+		return;
+	}
 
 halt: goto halt;
 
 }
 
-void common_handler(struct context_no_error context)
+void common_handler(uint32_t vector, struct iret_frame *frame)
 {
+	struct task *current = scheduler_get_current();
+	int from_user = (frame->cs == GDT_USER_CODE);
+
+	if (current && current->is_user && from_user) {
+		int sig = exception_to_signal(vector);
+		current->pending_signals |= (1 << (sig - 1));
+		signal_check_and_deliver(frame);
+		return;
+	}
 
 halt: goto halt;
 

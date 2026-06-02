@@ -7,6 +7,7 @@
 #define MAX_TASKS 256
 #define TASK_STACK_SIZE 4096
 #define TASK_NAME_LEN 32
+#define TASK_NSIG 32
 
 enum task_state {
 	TASK_STATE_READY,
@@ -33,6 +34,14 @@ struct task {
 	uint32_t program_break;
 	char cwd[256];
 	uint32_t wakeup_tick;
+
+	/* Signal state */
+	uint32_t pending_signals;
+	uint32_t signal_mask;
+	uint32_t signal_sigframe;
+	void (*signal_handlers[TASK_NSIG])(int);
+	uint32_t signal_handlers_mask[TASK_NSIG];
+	int signal_handlers_flags[TASK_NSIG];
 };
 
 struct task *task_alloc(void);
@@ -52,5 +61,8 @@ void task_block(void);
 void task_wake(int pid);
 int task_waitpid(int pid, int *status, int options);
 struct task *task_find_child_exited_pid(int parent_pid, int target_pid);
+
+extern struct task tasks[];
+extern int next_pid;
 
 #endif

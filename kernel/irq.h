@@ -11,7 +11,9 @@ enum IRQ_REQUEST_ERROR {
     IRQ_REQUEST_ERROR_INVALID,
 };
 
+struct iret_frame;
+
 uint8_t irq_request(uint8_t irq, irq_handler_t handler);
-void irq_handler(uint8_t irq);
+void irq_handler(uint8_t irq, struct iret_frame *frame);
 
 #endif

@@ -3,6 +3,9 @@
 #include "pio.h"
 #include "interrupt.h"
 #include "termios.h"
+#include "signal.h"
+#include "scheduler.h"
+#include "task.h"
 #include <string.h>
 
 #define KBD_BUFFER_SIZE 256
@@ -96,6 +99,9 @@ static void kbd_process_scancode(uint8_t scancode)
 	/* Mark key as held down */
 	kbd_key_state[scancode / 8] |= (1 << (scancode % 8));
 
+	if (scancode == 0x1D)
+		return; /* Ctrl tracked via key_state */
+
 	if (scancode == 0x2A || scancode == 0x36)
 	{
 		kbd_shift = 1;
@@ -105,6 +111,15 @@ static void kbd_process_scancode(uint8_t scancode)
 	if (scancode == 0x3A)
 	{
 		kbd_caps = !kbd_caps;
+		return;
+	}
+
+	/* Ctrl+C → SIGINT */
+	if ((kbd_key_state[0x1D / 8] & (1 << (0x1D % 8))) && scancode == 0x2E)
+	{
+		struct task *current = scheduler_get_current();
+		if (current)
+			signal_send(current->pid, SIGINT);
 		return;
 	}
 

@@ -3,11 +3,12 @@
 #include "vfs.h"
 #include "mm.h"
 #include "gdt.h"
+#include "signal.h"
 #include <string.h>
 
 struct task tasks[MAX_TASKS];
 static uint8_t task_stacks[MAX_TASKS][TASK_STACK_SIZE] __attribute__((aligned(16)));
-static int next_pid = 0;
+int next_pid = 0;
 
 extern void fork_return(void);
 
@@ -29,6 +30,7 @@ struct task *task_alloc(void)
 	t->program_break = 0;
 	t->cwd[0] = '/';
 	t->cwd[1] = '\0';
+	signal_init_task(t);
 	next_pid++;
 
 	return t;
@@ -180,8 +182,11 @@ void task_exit(void)
 	current->state = TASK_STATE_EXITED;
 
 	/* Wake parent that may be blocked in waitpid */
-	if (current->parent_pid >= 0)
+	if (current->parent_pid >= 0) {
 		task_wake(current->parent_pid);
+		/* Send SIGCHLD to parent */
+		signal_send(current->parent_pid, SIGCHLD);
+	}
 
 	task_yield();
 }

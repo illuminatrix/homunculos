@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include "drivers/hello/hello.h"
 #include "termios.h"
+#include "signal.h"
 
 uint32_t systemcall_table[255];
 
@@ -479,6 +480,9 @@ sys_exec(const char *path, char **argv, char **envp)
 	*(uint32_t *)user_esp = (uint32_t)argc;
 
 	mm_frame_free(str_buf);
+
+	/* Reset signal handlers on exec (POSIX: exec resets to SIG_DFL) */
+	signal_init_task(current);
 
 	asm volatile("movl %%ebp, %0" : "=r"(fp));
 	*(uint32_t *)(fp + 20) = entry;
@@ -1006,6 +1010,21 @@ sys_nanosleep(struct k_timespec *req, struct k_timespec *rem)
 	current->state = TASK_STATE_BLOCKED;
 
 	while (scheduler_get_tick_count() < current->wakeup_tick) {
+		/* Check for pending signals that interrupt sleep */
+		uint32_t pending = current->pending_signals
+			& ~current->signal_mask;
+		if (pending) {
+			if (rem) {
+				uint32_t ticks_left
+					= current->wakeup_tick
+					- scheduler_get_tick_count();
+				rem->tv_sec = ticks_left / TICK_HZ;
+				rem->tv_nsec = (ticks_left % TICK_HZ)
+					* (1000000000 / TICK_HZ);
+			}
+			current->state = TASK_STATE_RUNNING;
+			return -1;
+		}
 		schedule();
 		/* If schedule() returned (no other READY task), halt and wait */
 		if (scheduler_get_tick_count() < current->wakeup_tick)
@@ -1064,4 +1083,9 @@ syscall_init(void)
 	systemcall_table[SYS_time]    = (uint32_t)sys_time;
 	systemcall_table[SYS_gettimeofday]=(uint32_t)sys_gettimeofday;
 	systemcall_table[SYS_nanosleep] =(uint32_t)sys_nanosleep;
+	systemcall_table[SYS_kill]      = (uint32_t)sys_kill;
+	systemcall_table[SYS_signal]    = (uint32_t)sys_signal;
+	systemcall_table[SYS_rt_sigaction]  = (uint32_t)sys_rt_sigaction;
+	systemcall_table[SYS_rt_sigreturn]  = (uint32_t)sys_rt_sigreturn;
+	systemcall_table[SYS_rt_sigprocmask] = (uint32_t)sys_rt_sigprocmask;
 }

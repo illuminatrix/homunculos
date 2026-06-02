@@ -142,6 +142,11 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 162 | SYS_nanosleep | `sys_nanosleep` | `int sys_nanosleep(struct k_timespec *req, struct k_timespec *rem)` |
 | 88 | SYS_reboot | `sys_reboot` | `int sys_reboot(void)` |
 | 122 | SYS_uname | `sys_uname` | `int sys_uname(struct utsname *buf)` |
+| 37 | SYS_kill | `sys_kill` | `int sys_kill(int pid, int sig)` |
+| 48 | SYS_signal | `sys_signal` | `int sys_signal(int signum, void (*handler)(int))` |
+| 67 | SYS_rt_sigaction | `sys_rt_sigaction` | `int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)` |
+| 126 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
+| 173 | SYS_rt_sigreturn | `sys_rt_sigreturn` | `int sys_rt_sigreturn(void)` |
 
 Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.
 
@@ -228,7 +233,7 @@ struct file { const struct vfs_ops *ops; void *private_data; };
 
 ```
 arch/i386/           -- Boot, GDT/IDT, paging, task context, PIT, port I/O, kernel.ld
-kernel/              -- Main, syscalls, scheduler, task, VFS, PIC, IRQ, block, ext2, mm.h, interrupt.h, pio.h
+kernel/              -- Main, syscalls, scheduler, task, VFS, PIC, IRQ, block, ext2, signal, mm.h, interrupt.h, pio.h
 drivers/vga/         -- VGA text-mode framebuffer
 drivers/ps2/         -- PS/2 keyboard
 drivers/ata/         -- ATA PIO driver (block device)
@@ -286,6 +291,7 @@ make -C tests test-pipe
 make -C tests test-waitpid
 make -C tests test-time
 make -C tests test-env
+make -C tests test-signal
 
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock

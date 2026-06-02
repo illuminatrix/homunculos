@@ -38,4 +38,11 @@
 #define SYS_gettimeofday 78
 #define SYS_nanosleep  162
 
+/* Signal syscalls */
+#define SYS_kill      37
+#define SYS_signal    48
+#define SYS_rt_sigaction   67
+#define SYS_rt_sigreturn  173
+#define SYS_rt_sigprocmask 126
+
 #endif
