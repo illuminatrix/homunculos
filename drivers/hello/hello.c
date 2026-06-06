@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "devtmpfs.h"
 #include <string.h>
 
 static int hello_read(struct vfs_inode *inode, uint32_t offset,
@@ -24,16 +25,8 @@ static struct vfs_inode_ops hello_file_ops = {
 	.add_entry = 0,
 };
 
-void hello_driver_init(void)
+static void hello_init(void)
 {
-	struct vfs_inode *inode = vfs_alloc_inode();
-	if (!inode)
-		return;
-
-	inode->i_type = VFS_IFILE;
-	inode->i_size = 8; /* "hello fs" */
-	inode->ops = &hello_file_ops;
-	inode->private_data = 0;
-
-	vfs_register_by_path("/dev/hello", inode);
+	devtmpfs_register_inode("hello", &hello_file_ops, 0, VFS_IFILE);
 }
+VFS_DRIVER_INIT(hello_init);

@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "devtmpfs.h"
 #include "scheduler.h"
 #include "task.h"
 #include <string.h>
@@ -76,16 +77,8 @@ static struct vfs_inode_ops tty_file_ops = {
 	.add_entry = 0,
 };
 
-void tty_driver_init(void)
+static void tty_init(void)
 {
-	struct vfs_inode *inode = vfs_alloc_inode();
-	if (!inode)
-		return;
-
-	inode->i_type = VFS_IFILE;
-	inode->i_size = 0;
-	inode->ops = &tty_file_ops;
-	inode->private_data = 0;
-
-	vfs_register_by_path("/dev/tty", inode);
+	devtmpfs_register_inode("tty", &tty_file_ops, 0, VFS_IFILE);
 }
+VFS_DRIVER_INIT(tty_init);

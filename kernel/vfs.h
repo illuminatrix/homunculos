@@ -106,13 +106,6 @@ struct vfs_inode {
 
 #define VFS_MAX_INODES     256
 #define VFS_MAX_OPEN_FILES 16
-#define VFS_MAX_DEVICES    8
-
-struct vfs_device {
-	const char *name;
-	const struct vfs_ops *ops;
-	void *private_data;
-};
 
 void vfs_inode_init(void);
 struct vfs_inode *vfs_alloc_inode(void);
@@ -124,12 +117,9 @@ struct vfs_inode *vfs_resolve_path(const char *path);
 struct vfs_inode *vfs_resolve_path_no_follow(const char *path);
 int vfs_register_by_path(const char *path, struct vfs_inode *inode);
 void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf);
-int vfs_register_device(const char *name, const struct vfs_ops *ops,
-			void *private_data);
-void vfs_create_device_nodes(void);
+struct file *vfs_alloc_file(void);
 struct file *vfs_open_file(struct vfs_inode *inode);
 struct file *vfs_open_file_flags(struct vfs_inode *inode, int flags);
-struct file *vfs_alloc_file(void);
 void vfs_close_file(struct file *f);
 struct vfs_inode *vfs_create_file(const char *path);
 int vfs_mkdir(const char *path);

@@ -13,9 +13,6 @@
 #include "devtmpfs.h"
 #include "part.h"
 #include "panic.h"
-#include "drivers/hello/hello.h"
-#include "drivers/null/null.h"
-#include "drivers/tty/tty.h"
 #include "drivers/ata/ata.h"
 #include "gdt.h"
 
@@ -202,10 +199,7 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 	devtmpfs_init();
 
 	/* Create device nodes in initial devtmpfs /dev for early boot output */
-	vfs_create_device_nodes();
-	hello_driver_init();
-	null_driver_init();
-	tty_driver_init();
+	devtmpfs_create_nodes();
 
 	welcome();
 	init_mm((mmap_entry_t *)mem_info_ptr->mmap_addr,

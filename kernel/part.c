@@ -1,6 +1,7 @@
 #include "part.h"
 #include "block.h"
 #include "vfs.h"
+#include "devtmpfs.h"
 #include <string.h>
 
 /* ----------------------------------------------------------------
@@ -226,7 +227,7 @@ static struct vfs_ops block_dev_file_ops = {
 
 static void register_block_vfs(struct block_device *bdev)
 {
-	vfs_register_device(bdev->name, &block_dev_file_ops, bdev);
+	devtmpfs_register_vfs(bdev->name, &block_dev_file_ops, bdev);
 }
 
 /* ----------------------------------------------------------------

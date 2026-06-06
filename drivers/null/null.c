@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "devtmpfs.h"
 #include <string.h>
 
 static int null_read(struct vfs_inode *inode, uint32_t offset,
@@ -28,16 +29,8 @@ static struct vfs_inode_ops null_file_ops = {
 	.add_entry = 0,
 };
 
-void null_driver_init(void)
+static void null_init(void)
 {
-	struct vfs_inode *inode = vfs_alloc_inode();
-	if (!inode)
-		return;
-
-	inode->i_type = VFS_IFILE;
-	inode->i_size = 0;
-	inode->ops = &null_file_ops;
-	inode->private_data = 0;
-
-	vfs_register_by_path("/dev/null", inode);
+	devtmpfs_register_inode("null", &null_file_ops, 0, VFS_IFILE);
 }
+VFS_DRIVER_INIT(null_init);

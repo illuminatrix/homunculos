@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "devtmpfs.h"
 #include "pio.h"
 #include "termios.h"
 #include <string.h>
@@ -144,7 +145,7 @@ static void vga_text_init(void)
 	stderr_priv.cursor = &vga_cursor;
 	stderr_priv.color  = 0x04; /* red on black */
 
-	vfs_register_device("vga", &vga_ops, &stdout_priv);
-	vfs_register_device("vgaerr", &vga_ops, &stderr_priv);
+	devtmpfs_register_vfs("vga", &vga_ops, &stdout_priv);
+	devtmpfs_register_vfs("vgaerr", &vga_ops, &stderr_priv);
 }
 VFS_DRIVER_INIT(vga_text_init);

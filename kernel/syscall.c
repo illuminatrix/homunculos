@@ -15,9 +15,7 @@
 #include "devtmpfs.h"
 #include "pipe.h"
 #include <dirent.h>
-#include "drivers/hello/hello.h"
-#include "drivers/null/null.h"
-#include "drivers/tty/tty.h"
+#include "devtmpfs.h"
 #include "termios.h"
 #include "signal.h"
 
@@ -618,14 +616,6 @@ sys_mount(const char *source, const char *target, const char *fstype)
 
 	if (!vfs_mount_create(target_inode, fs_root))
 		return -1;
-
-	/* Re-populate device nodes when devtmpfs is mounted at /dev */
-	if (strcmp(fstype, "devtmpfs") == 0 && strcmp(target, "/dev") == 0) {
-		vfs_create_device_nodes();
-		hello_driver_init();
-		null_driver_init();
-		tty_driver_init();
-	}
 
 	return 0;
 }

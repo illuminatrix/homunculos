@@ -1,10 +1,92 @@
 #include "vfs.h"
+#include "devtmpfs.h"
 #include <string.h>
 #include <stdio.h>
 
 #define DEVTMPFS_MAX_ENTRIES 16
 #define DEVTMPFS_MAX_DIRS 16
 #define DEVTMPFS_MAX_SYMLINKS 16
+#define DEVTMPFS_MAX_DEVICES 32
+
+/* --- Device registration table (for late /dev population) --- */
+
+#define DEVTMPFS_DEVICE_VFS   0
+#define DEVTMPFS_DEVICE_INODE 1
+
+struct devtmpfs_device {
+	char name[64];
+	int type;
+	uint16_t i_type;
+	/* For DEVTMPFS_DEVICE_INODE type */
+	const struct vfs_inode_ops *inode_ops;
+	void *private_data;
+	/* For DEVTMPFS_DEVICE_VFS type */
+	const struct vfs_ops *vfs_ops;
+	void *vfs_private;
+};
+
+static struct devtmpfs_device devtmpfs_devices[DEVTMPFS_MAX_DEVICES];
+static int devtmpfs_device_count;
+
+/* --- vfs_ops wrapper: converts file-level ops to inode-level --- */
+
+static int devtmpfs_vfs_read(struct vfs_inode *inode, uint32_t offset,
+			     void *buf, uint32_t size)
+{
+	struct devtmpfs_device *dev =
+		(struct devtmpfs_device *)inode->private_data;
+	struct file f;
+	if (!dev->vfs_ops->read)
+		return -1;
+	f.ops = dev->vfs_ops;
+	f.private_data = dev->vfs_private;
+	f.pos = offset;
+	return dev->vfs_ops->read(&f, buf, size);
+}
+
+static int devtmpfs_vfs_write(struct vfs_inode *inode, uint32_t offset,
+			      const void *buf, uint32_t size)
+{
+	struct devtmpfs_device *dev =
+		(struct devtmpfs_device *)inode->private_data;
+	struct file f;
+	if (!dev->vfs_ops->write)
+		return -1;
+	f.ops = dev->vfs_ops;
+	f.private_data = dev->vfs_private;
+	f.pos = offset;
+	return dev->vfs_ops->write(&f, buf, size);
+}
+
+static int devtmpfs_vfs_ioctl(struct vfs_inode *inode, int cmd, void *arg)
+{
+	struct devtmpfs_device *dev =
+		(struct devtmpfs_device *)inode->private_data;
+	struct file f;
+	if (!dev->vfs_ops->ioctl)
+		return -1;
+	f.ops = dev->vfs_ops;
+	f.private_data = dev->vfs_private;
+	f.pos = 0;
+	return dev->vfs_ops->ioctl(&f, cmd, arg);
+}
+
+static struct vfs_inode_ops devtmpfs_vfs_inode_ops = {
+	.read      = devtmpfs_vfs_read,
+	.write     = devtmpfs_vfs_write,
+	.ioctl     = devtmpfs_vfs_ioctl,
+	.readdir   = 0,
+	.lookup    = 0,
+	.add_entry = 0,
+	.remove_entry = 0,
+	.mkdir     = 0,
+	.rmdir     = 0,
+	.unlink    = 0,
+	.symlink   = 0,
+	.readlink  = 0,
+};
+
+/* --- Directory inode ops for devtmpfs --- */
 
 struct devtmpfs_entry {
 	char name[64];
@@ -26,8 +108,6 @@ static struct devtmpfs_dir devtmpfs_root_data;
 static struct devtmpfs_dir devtmpfs_dev_data;
 static struct devtmpfs_dir devtmpfs_mnt_data;
 static struct devtmpfs_dir devtmpfs_devmount_root;
-
-/* --- Directory inode ops --- */
 
 static int devtmpfs_readdir(struct vfs_inode *dir, uint32_t index,
 			 struct vfs_dirent *dent)
@@ -194,6 +274,94 @@ static struct vfs_inode_ops devtmpfs_dir_ops = {
 	.readlink  = devtmpfs_readlink_op,
 };
 
+/* --- Device registration API --- */
+
+void devtmpfs_register_vfs(const char *name,
+			   const struct vfs_ops *ops,
+			   void *private_data)
+{
+	if (devtmpfs_device_count >= DEVTMPFS_MAX_DEVICES || !name || !ops)
+		return;
+
+	struct devtmpfs_device *dev = &devtmpfs_devices[devtmpfs_device_count];
+	int i;
+
+	for (i = 0; name[i] && i < (int)sizeof(dev->name) - 1; i++)
+		dev->name[i] = name[i];
+	dev->name[i] = '\0';
+
+	dev->type = DEVTMPFS_DEVICE_VFS;
+	dev->i_type = VFS_IFILE;
+	dev->vfs_ops = ops;
+	dev->vfs_private = private_data;
+	devtmpfs_device_count++;
+}
+
+void devtmpfs_register_inode(const char *name,
+			     const struct vfs_inode_ops *ops,
+			     void *private_data,
+			     uint16_t i_type)
+{
+	if (devtmpfs_device_count >= DEVTMPFS_MAX_DEVICES || !name)
+		return;
+
+	struct devtmpfs_device *dev = &devtmpfs_devices[devtmpfs_device_count];
+	int i;
+
+	for (i = 0; name[i] && i < (int)sizeof(dev->name) - 1; i++)
+		dev->name[i] = name[i];
+	dev->name[i] = '\0';
+
+	dev->type = DEVTMPFS_DEVICE_INODE;
+	dev->i_type = i_type;
+	dev->inode_ops = ops;
+	dev->private_data = private_data;
+	devtmpfs_device_count++;
+}
+
+/* --- Create device inodes in a given devtmpfs directory --- */
+
+static void populate_dir(struct vfs_inode *dev_dir)
+{
+	int i;
+
+	if (!dev_dir || dev_dir->i_type != VFS_IDIR)
+		return;
+
+	for (i = 0; i < devtmpfs_device_count; i++) {
+		struct devtmpfs_device *dev = &devtmpfs_devices[i];
+		struct vfs_inode *inode = vfs_alloc_inode();
+
+		if (!inode)
+			continue;
+
+		inode->i_type = dev->i_type;
+		inode->i_size = 0;
+
+		if (dev->type == DEVTMPFS_DEVICE_VFS) {
+			inode->ops = &devtmpfs_vfs_inode_ops;
+			/* private_data points to the device entry so wrapper
+			 * ops can find both vfs_ops and vfs_private */
+			inode->private_data = dev;
+		} else {
+			inode->ops = dev->inode_ops;
+			inode->private_data = dev->private_data;
+		}
+
+		devtmpfs_add_entry(dev_dir, dev->name, inode);
+	}
+}
+
+void devtmpfs_create_nodes(void)
+{
+	struct vfs_inode *dev_dir = vfs_resolve_path("/dev");
+
+	if (!dev_dir)
+		return;
+
+	populate_dir(dev_dir);
+}
+
 /* --- Init --- */
 
 void devtmpfs_init(void)
@@ -248,5 +416,8 @@ struct vfs_inode *devtmpfs_create_mount(void)
 	inode->i_type = VFS_IDIR;
 	inode->ops = &devtmpfs_dir_ops;
 	inode->private_data = &devtmpfs_devmount_root;
+
+	populate_dir(inode);
+
 	return inode;
 }

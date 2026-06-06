@@ -1,4 +1,5 @@
 #include "vfs.h"
+#include "devtmpfs.h"
 #include "irq.h"
 #include "pio.h"
 #include "interrupt.h"
@@ -228,6 +229,6 @@ static void ps2_keyboard_init(void)
 	ps2_wait_write();
 	out(PS2_DATA, 0xF4);
 
-	vfs_register_device("kbd", &kbd_ops, 0);
+	devtmpfs_register_vfs("kbd", &kbd_ops, 0);
 }
 VFS_DRIVER_INIT(ps2_keyboard_init);
