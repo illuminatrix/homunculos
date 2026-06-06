@@ -9,10 +9,10 @@ OBJCOPY := objcopy
 CFLAGS := -g -std=gnu11 -nostdlib -ffreestanding -fno-pie -O0 -Wextra -m32 -fno-stack-protector -mno-sse -Ilibc/include -Ikernel -Ishell
 ASFLAGS := -32
 include arch/Makefile.mk
+include drivers/Makefile.mk
 include kernel/Makefile.mk
 include shell/Makefile.mk
 include init/Makefile.mk
-include drivers/Makefile.mk
 include shell/bin/Makefile.mk
 DISK_IMG := disk.img
 CMDLINE ?= root=/dev/hda1 init=/bin/init

@@ -259,3 +259,5 @@ void part_init(void)
 	for (i = 0; i < part_count; i++)
 		register_block_vfs(&part_bdevs[i]);
 }
+
+VFS_DRIVER_INIT(part_init);

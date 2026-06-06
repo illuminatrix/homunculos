@@ -11,9 +11,7 @@
 #include "vfs.h"
 #include "elf.h"
 #include "devtmpfs.h"
-#include "part.h"
 #include "panic.h"
-#include "drivers/ata/ata.h"
 #include "gdt.h"
 
 #define USER_STACK_TOP 0xC0000000
@@ -206,14 +204,6 @@ void kernel_main(multiboot_info_t *mem_info_ptr)
 		mem_info_ptr->mmap_length);
 
 	gdt_init();
-
-	/* Init block device drivers (ATA), parse partitions, mount ext2 */
-	printf("ata: probing...\n");
-	ata_init();
-	printf("ata: done\n");
-
-	/* Parse MBR partitions and register block device VFS devices */
-	part_init();
 
 	/* Parse root= from bootloader command line */
 	char root_buf[64];
