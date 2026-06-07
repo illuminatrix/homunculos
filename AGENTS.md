@@ -147,6 +147,7 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 174 | SYS_rt_sigaction | `sys_rt_sigaction` | `int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)` |
 | 175 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
 | 15 | SYS_chmod | `sys_chmod` | `int sys_chmod(const char *path, int mode)` |
+| 9 | SYS_link | `sys_link` | `int sys_link(const char *old_path, const char *new_path)` |
 | 36 | SYS_sync | `sys_sync` | `int sys_sync(void)` |
 | 118 | SYS_fsync | `sys_fsync` | `int sys_fsync(int fd)` |
 | 38 | SYS_rename | `sys_rename` | `int sys_rename(const char *old, const char *new)` |

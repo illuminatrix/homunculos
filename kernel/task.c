@@ -55,6 +55,7 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 		child->fd_table[i] = parent->fd_table[i];
 		if (child->fd_table[i])
 			child->fd_table[i]->refcount++;
+		child->fd_flags[i] = parent->fd_flags[i];
 	}
 
 	child->parent_pid = parent->pid;

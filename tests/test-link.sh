@@ -1,10 +1,10 @@
 #!/bin/bash
-# Test: rename syscall (SYS_rename=38) via mv command
+# Test: link syscall (SYS_link=9) via ln command (hard link)
 source "$(dirname "$0")/helpers.sh"
 
 check_deps qemu-system-i386 socat dd mkfs.ext2 debugfs sfdisk || exit 1
 
-echo "=== MV (Rename) Test ==="
+echo "=== Link Test ==="
 
 qemu_start_with_disk 15 || { fail "QEMU failed to start"; exit 1; }
 
@@ -27,63 +27,86 @@ else
 	errors=$((errors + 1))
 fi
 
-# --- 1) Verify /hello.txt exists before rename ---
+# --- Stat /hello.txt to confirm it exists ---
 send_keys "stat /hello.txt" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 2
 
 if vga_contains "stat failed"; then
-	fail "/hello.txt should exist before rename but stat failed"
+	fail "stat /hello.txt failed"
 	errors=$((errors + 1))
 else
-	pass "/hello.txt exists before rename"
+	pass "stat /hello.txt succeeded"
 fi
 
-# --- 2) Rename hello.txt -> hello2.txt ---
-send_keys "mv /hello.txt /hello2.txt" 0.08
+# --- Create hard link ---
+send_keys "ln /hello.txt /hello-hard.txt" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 2
 
-if vga_contains "mv failed"; then
-	fail "mv command failed"
+if vga_contains "ln: /hello-hard.txt: error"; then
+	fail "ln hard link failed"
 	errors=$((errors + 1))
 else
-	pass "mv /hello.txt /hello2.txt succeeded"
+	pass "ln hard link succeeded"
 fi
 
-# --- 3) Verify /hello2.txt exists after rename ---
-send_keys "stat /hello2.txt" 0.08
+# --- Stat the hard link ---
+send_keys "stat /hello-hard.txt" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 2
 
 if vga_contains "stat failed"; then
-	fail "/hello2.txt should exist after rename but stat failed"
+	fail "stat /hello-hard.txt failed"
 	errors=$((errors + 1))
+elif vga_contains "ino="; then
+	pass "Hard link stat shows inode info (same inode as original)"
 else
-	pass "/hello2.txt exists after rename"
+	fail "Hard link stat did not show inode info"
+	errors=$((errors + 1))
 fi
 
-# --- 4) Verify /hello.txt is gone after rename ---
+# --- Stat the original again ---
 send_keys "stat /hello.txt" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 2
 
 if vga_contains "stat failed"; then
-	pass "/hello.txt is gone after rename (expected)"
-else
-	fail "/hello.txt still exists after rename"
+	fail "stat /hello.txt failed after link"
 	errors=$((errors + 1))
+else
+	pass "Original file still accessible after hard link"
 fi
 
-# --- Restore original file for subsequent tests ---
-send_keys "mv /hello2.txt /hello.txt" 0.08
+# --- Remove hard link ---
+send_keys "rm /hello-hard.txt" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 2
+
+if vga_contains "rm failed"; then
+	fail "rm /hello-hard.txt failed"
+	errors=$((errors + 1))
+else
+	pass "rm /hello-hard.txt succeeded"
+fi
+
+# --- Stat original after removal ---
+send_keys "stat /hello.txt" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+if vga_contains "stat failed"; then
+	fail "stat /hello.txt failed after removing hard link"
+	errors=$((errors + 1))
+else
+	pass "Original file still accessible after removing hard link"
+fi
 
 # --- Poweroff ---
 send_keys "poweroff" 0.08

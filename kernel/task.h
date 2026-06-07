@@ -28,6 +28,7 @@ struct task {
 	char name[TASK_NAME_LEN];
 	struct task *next;
 	struct file *fd_table[VFS_MAX_FD];
+	uint8_t fd_flags[VFS_MAX_FD];
 	uint32_t *pdir;
 	int is_user;
 	uint32_t brk_start;

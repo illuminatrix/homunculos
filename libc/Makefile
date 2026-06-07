@@ -54,6 +54,9 @@ unistd/sync.o \
 unistd/fsync.o \
 unistd/dup.o \
 unistd/chmod.o \
+unistd/fchmod.o \
+unistd/link.o \
+unistd/fcntl.o \
 unistd/times.o \
 unistd/rename.o \
 

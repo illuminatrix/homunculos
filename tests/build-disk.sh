@@ -41,8 +41,14 @@ if [ -f "$DUP_TEST" ]; then
 	debugfs -w .part.img -R "write $DUP_TEST /bin/dup_test" 2>/dev/null
 fi
 
+# Test-only binary for fcntl testing
+FCNTL_TEST="${TESTS_DIR}/fcntl_test.elf"
+if [ -f "$FCNTL_TEST" ]; then
+	debugfs -w .part.img -R "write $FCNTL_TEST /bin/fcntl_test" 2>/dev/null
+fi
+
 # Command binaries
-for cmd in poweroff reboot greeting uname ls cat stat hello pwd cd echo touch write mkdir rm ln readlink sleep systime env kill trap sync times chmod mv; do
+for cmd in poweroff reboot greeting uname ls cat stat hello pwd cd echo touch write mkdir rm ln readlink sleep systime env kill trap sync times chmod mv fchmod; do
 	src="${TESTS_DIR}/../shell/bin/$cmd"
 	if [ -f "$src" ]; then
 		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null

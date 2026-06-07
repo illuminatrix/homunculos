@@ -83,6 +83,7 @@ static struct vfs_inode_ops devtmpfs_vfs_inode_ops = {
 	.rmdir     = 0,
 	.unlink    = 0,
 	.symlink   = 0,
+	.link      = 0,
 	.readlink  = 0,
 };
 
@@ -276,6 +277,7 @@ static struct vfs_inode_ops devtmpfs_dir_ops = {
 	.rmdir     = devtmpfs_rmdir,
 	.unlink    = devtmpfs_unlink,
 	.symlink   = devtmpfs_symlink,
+	.link      = 0,
 	.readlink  = devtmpfs_readlink_op,
 };
 

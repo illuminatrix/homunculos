@@ -665,6 +665,31 @@ int vfs_symlink(const char *target, const char *path)
 	return parent->ops->symlink(parent, name, target);
 }
 
+int vfs_link(const char *old_path, const char *new_path)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *existing;
+	struct vfs_inode *parent;
+
+	if (!old_path || !new_path)
+		return -1;
+
+	existing = vfs_resolve_path(old_path);
+	if (!existing)
+		return -1;
+
+	vfs_split_path(new_path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->link)
+		return -1;
+
+	return parent->ops->link(parent, name, existing);
+}
+
 int vfs_readlink(const char *path, char *buf, uint32_t size)
 {
 	struct vfs_inode *inode;
@@ -680,18 +705,13 @@ int vfs_readlink(const char *path, char *buf, uint32_t size)
 	return inode->ops->readlink(inode, buf, size);
 }
 
-int vfs_chmod(const char *path, uint16_t mode)
+int vfs_inode_chmod(struct vfs_inode *inode, uint16_t mode)
 {
-	struct vfs_inode *inode;
 	uint16_t full_mode;
 
-	if (!path)
-		return -1;
-	inode = vfs_resolve_path(path);
 	if (!inode)
 		return -1;
 
-	/* Preserve file type bits from existing i_mode, set permission bits */
 	full_mode = (inode->i_mode & S_IFMT) | (mode & S_IPERM);
 	inode->i_mode = full_mode;
 
@@ -699,6 +719,19 @@ int vfs_chmod(const char *path, uint16_t mode)
 		return inode->ops->chmod(inode, full_mode);
 
 	return 0;
+}
+
+int vfs_chmod(const char *path, uint16_t mode)
+{
+	struct vfs_inode *inode;
+
+	if (!path)
+		return -1;
+	inode = vfs_resolve_path(path);
+	if (!inode)
+		return -1;
+
+	return vfs_inode_chmod(inode, mode);
 }
 
 int vfs_rename(const char *old_path, const char *new_path)

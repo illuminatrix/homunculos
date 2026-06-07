@@ -1068,6 +1068,81 @@ int sys_chmod(const char *path, int mode)
 	return vfs_chmod(abs_path, (uint16_t)mode);
 }
 
+/* --- fchmod --- */
+int sys_fchmod(int fd, int mode)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+	struct vfs_inode *inode;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	inode = (struct vfs_inode *)f->private_data;
+	if (!inode)
+		return -1;
+
+	return vfs_inode_chmod(inode, (uint16_t)mode);
+}
+
+/* --- fcntl64 --- */
+#define F_DUPFD  0
+#define F_GETFD  1
+#define F_SETFD  2
+#define F_GETFL  3
+#define F_SETFL  4
+#define FD_CLOEXEC 1
+
+int sys_fcntl64(int fd, int cmd, int arg)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	switch (cmd) {
+	case F_DUPFD:
+	{
+		int new_fd;
+		for (new_fd = arg; new_fd < VFS_MAX_FD; new_fd++) {
+			if (!current->fd_table[new_fd]) {
+				current->fd_table[new_fd] = f;
+				f->refcount++;
+				current->fd_flags[new_fd] = 0;
+				return new_fd;
+			}
+		}
+		return -1;
+	}
+	case F_GETFD:
+		return current->fd_flags[fd];
+	case F_SETFD:
+		current->fd_flags[fd] = arg & FD_CLOEXEC;
+		return 0;
+	case F_GETFL:
+		return f->flags;
+	case F_SETFL:
+		/* Allow setting O_APPEND (and eventually O_NONBLOCK) */
+		f->flags = (f->flags & ~O_APPEND) | (arg & O_APPEND);
+		return 0;
+	default:
+		return -1;
+	}
+}
+
 /* --- rename --- */
 int sys_rename(const char *old_path, const char *new_path)
 {
@@ -1081,6 +1156,21 @@ int sys_rename(const char *old_path, const char *new_path)
 	build_abs_path(current, new_path, abs_new, sizeof(abs_new));
 
 	return vfs_rename(abs_old, abs_new);
+}
+
+/* --- link --- */
+int sys_link(const char *old_path, const char *new_path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_old[512], abs_new[512];
+
+	if (!current || !old_path || !new_path)
+		return -1;
+
+	build_abs_path(current, old_path, abs_old, sizeof(abs_old));
+	build_abs_path(current, new_path, abs_new, sizeof(abs_new));
+
+	return vfs_link(abs_old, abs_new);
 }
 
 /* --- Time syscalls --- */
@@ -1222,6 +1312,9 @@ syscall_init(void)
 	systemcall_table[SYS_fsync]    = (uint32_t)sys_fsync;
 	systemcall_table[SYS_dup]      = (uint32_t)sys_dup;
 	systemcall_table[SYS_chmod]    = (uint32_t)sys_chmod;
+	systemcall_table[SYS_fchmod]   = (uint32_t)sys_fchmod;
+	systemcall_table[SYS_link]     = (uint32_t)sys_link;
+	systemcall_table[SYS_fcntl64] = (uint32_t)sys_fcntl64;
 	systemcall_table[SYS_rename]   = (uint32_t)sys_rename;
 	systemcall_table[SYS_times]    = (uint32_t)sys_times;
 	systemcall_table[SYS_kill]      = (uint32_t)sys_kill;

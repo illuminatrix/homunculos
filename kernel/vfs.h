@@ -116,6 +116,8 @@ struct vfs_inode_ops {
 			uint32_t size);
 	int (*ioctl)(struct vfs_inode *inode, int cmd, void *arg);
 	int (*chmod)(struct vfs_inode *inode, uint16_t mode);
+	int (*link)(struct vfs_inode *parent, const char *name,
+		     struct vfs_inode *existing);
 	int (*rename)(struct vfs_inode *old_parent, const char *old_name,
 		      struct vfs_inode *new_parent, const char *new_name);
 };
@@ -151,9 +153,11 @@ int vfs_mkdir(const char *path);
 int vfs_rmdir(const char *path);
 int vfs_unlink(const char *path);
 int vfs_symlink(const char *target, const char *path);
+int vfs_link(const char *old_path, const char *new_path);
 int vfs_readlink(const char *path, char *buf, uint32_t size);
 int vfs_access(const char *path);
 int vfs_chmod(const char *path, uint16_t mode);
+int vfs_inode_chmod(struct vfs_inode *inode, uint16_t mode);
 int vfs_rename(const char *old_path, const char *new_path);
 void vfs_split_path(const char *path, char *dir_out, int dir_size,
 		    char *name_out, int name_size);

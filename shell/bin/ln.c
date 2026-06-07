@@ -29,8 +29,10 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 	} else {
-		printf("ln: hard link not supported\n");
-		exit(1);
+		if (link(target, linkname) < 0) {
+			printf("ln: %s: error\n", linkname);
+			exit(1);
+		}
 	}
 	return 0;
 }

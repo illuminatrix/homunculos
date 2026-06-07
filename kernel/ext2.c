@@ -27,6 +27,8 @@ static int ext2_readlink_op(struct vfs_inode *inode, char *buf,
 static int ext2_chmod(struct vfs_inode *inode, uint16_t mode);
 static int ext2_rename(struct vfs_inode *old_parent, const char *old_name,
 		       struct vfs_inode *new_parent, const char *new_name);
+static int ext2_link(struct vfs_inode *parent, const char *name,
+		     struct vfs_inode *existing);
 
 static struct vfs_inode_ops ext2_file_ops = {
 	.read      = ext2_inode_read,
@@ -39,6 +41,7 @@ static struct vfs_inode_ops ext2_file_ops = {
 	.rmdir     = 0,
 	.unlink    = 0,
 	.symlink   = 0,
+	.link      = 0,
 	.readlink  = 0,
 	.chmod     = ext2_chmod,
 };
@@ -54,6 +57,7 @@ static struct vfs_inode_ops ext2_dir_ops = {
 	.rmdir     = ext2_rmdir,
 	.unlink    = ext2_unlink,
 	.symlink   = ext2_symlink,
+	.link      = ext2_link,
 	.readlink  = 0,
 	.chmod     = ext2_chmod,
 	.rename    = ext2_rename,
@@ -70,6 +74,7 @@ static struct vfs_inode_ops ext2_symlink_ops = {
 	.rmdir     = 0,
 	.unlink    = 0,
 	.symlink   = 0,
+	.link      = 0,
 	.readlink  = ext2_readlink_op,
 };
 
@@ -1616,6 +1621,39 @@ static int ext2_rename(struct vfs_inode *old_parent, const char *old_name,
 						 ext2_buf);
 			}
 		}
+	}
+
+	return 0;
+}
+
+static int ext2_link(struct vfs_inode *parent, const char *name,
+		     struct vfs_inode *existing)
+{
+	struct ext2_inode_data *edata;
+	struct ext2_fs *fs;
+	struct ext2_inode raw;
+
+	if (!parent || !name || !existing)
+		return -1;
+
+	edata = (struct ext2_inode_data *)existing->private_data;
+	if (!edata)
+		return -1;
+	fs = edata->fs;
+
+	/* Increment link count on existing inode */
+	if (ext2_read_inode(fs, edata->inode_no, &raw) < 0)
+		return -1;
+	raw.links++;
+	if (ext2_write_inode(fs, edata->inode_no, &raw) < 0)
+		return -1;
+
+	/* Add directory entry pointing to the same inode */
+	if (ext2_add_entry(parent, name, existing) < 0) {
+		/* Roll back link count increment */
+		raw.links--;
+		ext2_write_inode(fs, edata->inode_no, &raw);
+		return -1;
 	}
 
 	return 0;
