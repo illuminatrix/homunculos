@@ -44,6 +44,8 @@
 #define SYS_times   43
 #define SYS_chmod   15
 
+#define SYS_fsync 118
+
 /* Signal syscalls */
 #define SYS_kill      37
 #define SYS_signal    48

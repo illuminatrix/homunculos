@@ -49,7 +49,7 @@ dietlibc's start.S expects environ from the stack, which works.
     dietlibc internal stdio, xopen() in sbase.
 [x] times      -- SYS_times (43).  time command.
 [x] sync       -- SYS_sync (36).  sync command.
-[ ] fsync      -- SYS_fsync (118).  File sync.
+[x] fsync      -- SYS_fsync (118).  File sync.
 [ ] truncate64 -- SYS_truncate64 (193).  dd, cp truncation.
 [ ] ftruncate64 -- SYS_ftruncate64 (194).  File truncation.
 

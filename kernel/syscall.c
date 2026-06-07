@@ -1004,6 +1004,14 @@ int sys_sync(void)
 	return 0;
 }
 
+/* --- fsync --- */
+int sys_fsync(int fd)
+{
+	(void)fd;
+	/* No write cache — nothing to flush */
+	return 0;
+}
+
 /* --- dup --- */
 int sys_dup(int oldfd)
 {
@@ -1211,6 +1219,7 @@ syscall_init(void)
 	systemcall_table[SYS_gettimeofday]=(uint32_t)sys_gettimeofday;
 	systemcall_table[SYS_nanosleep] =(uint32_t)sys_nanosleep;
 	systemcall_table[SYS_sync]     = (uint32_t)sys_sync;
+	systemcall_table[SYS_fsync]    = (uint32_t)sys_fsync;
 	systemcall_table[SYS_dup]      = (uint32_t)sys_dup;
 	systemcall_table[SYS_chmod]    = (uint32_t)sys_chmod;
 	systemcall_table[SYS_rename]   = (uint32_t)sys_rename;

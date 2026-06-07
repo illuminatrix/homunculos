@@ -51,6 +51,7 @@ unistd/gettimeofday.o \
 unistd/nanosleep.o \
 unistd/sleep.o \
 unistd/sync.o \
+unistd/fsync.o \
 unistd/dup.o \
 unistd/chmod.o \
 unistd/times.o \

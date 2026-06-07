@@ -148,6 +148,7 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 175 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
 | 15 | SYS_chmod | `sys_chmod` | `int sys_chmod(const char *path, int mode)` |
 | 36 | SYS_sync | `sys_sync` | `int sys_sync(void)` |
+| 118 | SYS_fsync | `sys_fsync` | `int sys_fsync(int fd)` |
 | 38 | SYS_rename | `sys_rename` | `int sys_rename(const char *old, const char *new)` |
 | 41 | SYS_dup | `sys_dup` | `int sys_dup(int oldfd)` |
 | 43 | SYS_times | `sys_times` | `int sys_times(struct k_tms *buf)` |
