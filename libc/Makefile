@@ -50,6 +50,11 @@ unistd/time.o \
 unistd/gettimeofday.o \
 unistd/nanosleep.o \
 unistd/sleep.o \
+unistd/sync.o \
+unistd/dup.o \
+unistd/chmod.o \
+unistd/times.o \
+unistd/rename.o \
 
 OBJS:=\
 $(FREEOBJS) \

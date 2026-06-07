@@ -43,6 +43,10 @@ int rmdir(const char *);
 int unlink(const char *);
 int symlink(const char *, const char *);
 int readlink(const char *, char *, unsigned int);
+void sync(void);
+int dup(int);
+int chmod(const char *, int);
+int rename(const char *, const char *);
 
 /* Environment */
 extern char **environ;

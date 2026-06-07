@@ -38,6 +38,12 @@
 #define SYS_gettimeofday 78
 #define SYS_nanosleep  162
 
+#define SYS_sync    36
+#define SYS_rename  38
+#define SYS_dup     41
+#define SYS_times   43
+#define SYS_chmod   15
+
 /* Signal syscalls */
 #define SYS_kill      37
 #define SYS_signal    48

@@ -50,8 +50,11 @@ Once the shell prompt (`>`) appears, you can type:
 | `env` | Print environment variables |
 | `kill <pid> <signum>` | Send a signal to a process |
 | `trap <signum> [kill]` | Test signal handling |
-| `kill <pid> <signum>` | Send a signal to a process |
 | `trap <signum>` | Catch a signal and print "CAUGHT" |
+| `sync` | Flush filesystem buffers (no-op) |
+| `times` | Print process times (ticks) |
+| `chmod <octal> <path>` | Change file permissions |
+| `mv <old> <new>` | Rename/move a file |
 
 Filesystem layout
 -----------------
@@ -109,6 +112,17 @@ make -C tests test-ext2-write
 make -C tests test-time
 make -C tests test-signal
 make -C tests test-null
+make -C tests test-stat
+make -C tests test-execv
+make -C tests test-chdir
+make -C tests test-ioctl
+make -C tests test-pipe
+make -C tests test-waitpid
+make -C tests test-sync
+make -C tests test-times
+make -C tests test-chmod
+make -C tests test-mv
+make -C tests test-dup
 ```
 
 Clean

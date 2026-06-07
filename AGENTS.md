@@ -146,6 +146,11 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 48 | SYS_signal | `sys_signal` | `int sys_signal(int signum, void (*handler)(int))` |
 | 174 | SYS_rt_sigaction | `sys_rt_sigaction` | `int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)` |
 | 175 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
+| 15 | SYS_chmod | `sys_chmod` | `int sys_chmod(const char *path, int mode)` |
+| 36 | SYS_sync | `sys_sync` | `int sys_sync(void)` |
+| 38 | SYS_rename | `sys_rename` | `int sys_rename(const char *old, const char *new)` |
+| 41 | SYS_dup | `sys_dup` | `int sys_dup(int oldfd)` |
+| 43 | SYS_times | `sys_times` | `int sys_times(struct k_tms *buf)` |
 | 173 | SYS_rt_sigreturn | `sys_rt_sigreturn` | `int sys_rt_sigreturn(void)` |
 
 Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.
@@ -182,7 +187,7 @@ struct file { const struct vfs_ops *ops; void *private_data; };
 - Accessor functions: `vfs_get_stdin()`, `vfs_get_stdout()`, `vfs_get_stderr()`
 - Each task has `fd_table[16]` — copied on fork; default: 0=stdin, 1=stdout, 2=stderr
 - VFS mount layer: flat array `mounts[VFS_MAX_MOUNTS=8]`. Mounted as: ext2 at root `/`, devtmpfs at `/dev`
-- `vfs_inode` struct (in `kernel/vfs.h`): `{ i_no, i_size, i_type, ops, private_data }`
+- `vfs_inode` struct (in `kernel/vfs.h`): `{ i_no, i_size, i_type, i_mode, ops, private_data }`
 - Inode pool: static array of 256 inodes (`VFS_MAX_INODES`)
 - File operations go through `vfs_open_file(inode)` which wraps an inode as a `struct file`
 - **Mount resolution**: `vfs_resolve_mount()` compares by `i_no` AND `ops` pointer (not by VFS inode pointer), because filesystem lookups like `ext2_lookup()` allocate **new VFS inode objects** for the same underlying resource each time. `ext2_lookup()` sets `child->i_no = found_inode` (the on-disk ext2 inode number) to enable stable identification.
@@ -293,6 +298,11 @@ make -C tests test-time
 make -C tests test-env
 make -C tests test-signal
 make -C tests test-null
+make -C tests test-sync
+make -C tests test-times
+make -C tests test-chmod
+make -C tests test-mv
+make -C tests test-dup
 
 # VGA dump via monitor socket
 echo "xp /80bx 0xB8000" | socat - UNIX-CONNECT:qemu-monitor.sock

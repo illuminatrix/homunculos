@@ -35,8 +35,14 @@ if [ -f "$PIPETEST" ]; then
 	debugfs -w .part.img -R "write $PIPETEST /bin/prepend" 2>/dev/null
 fi
 
+# Test-only binary for dup testing
+DUP_TEST="${TESTS_DIR}/dup_test.elf"
+if [ -f "$DUP_TEST" ]; then
+	debugfs -w .part.img -R "write $DUP_TEST /bin/dup_test" 2>/dev/null
+fi
+
 # Command binaries
-for cmd in poweroff reboot greeting uname ls cat stat hello pwd cd echo touch write mkdir rm ln readlink sleep systime env kill trap; do
+for cmd in poweroff reboot greeting uname ls cat stat hello pwd cd echo touch write mkdir rm ln readlink sleep systime env kill trap sync times chmod mv; do
 	src="${TESTS_DIR}/../shell/bin/$cmd"
 	if [ -f "$src" ]; then
 		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null

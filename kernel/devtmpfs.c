@@ -86,6 +86,9 @@ static struct vfs_inode_ops devtmpfs_vfs_inode_ops = {
 	.readlink  = 0,
 };
 
+/* Forward declaration for dir ops used by devtmpfs_mkdir */
+static struct vfs_inode_ops devtmpfs_dir_ops;
+
 /* --- Directory inode ops for devtmpfs --- */
 
 struct devtmpfs_entry {
@@ -189,7 +192,8 @@ static int devtmpfs_mkdir(struct vfs_inode *parent, const char *name)
 		return -1;
 
 	inode->i_type = VFS_IDIR;
-	inode->ops = parent->ops;
+	inode->i_mode = S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+	inode->ops = &devtmpfs_dir_ops;
 	inode->private_data = new_dir;
 
 	return devtmpfs_add_entry(parent, name, inode);
@@ -238,6 +242,7 @@ static int devtmpfs_symlink(struct vfs_inode *parent, const char *name,
 		return -1;
 
 	inode->i_type = VFS_ISYMLINK;
+	inode->i_mode = S_IFLNK | S_IRWXU | S_IRWXG | S_IRWXO;
 	inode->ops = parent->ops;
 	inode->private_data = target_copy;
 	inode->i_size = len;
@@ -337,6 +342,8 @@ static void populate_dir(struct vfs_inode *dev_dir)
 
 		inode->i_type = dev->i_type;
 		inode->i_size = 0;
+		inode->i_mode = (dev->i_type == VFS_IDIR)
+				? (S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) : (S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 		if (dev->type == DEVTMPFS_DEVICE_VFS) {
 			inode->ops = &devtmpfs_vfs_inode_ops;
@@ -380,6 +387,7 @@ void devtmpfs_init(void)
 	if (!root_inode)
 		return;
 	root_inode->i_type = VFS_IDIR;
+	root_inode->i_mode = S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 	root_inode->ops = &devtmpfs_dir_ops;
 	root_inode->private_data = root_dir;
 
@@ -388,6 +396,7 @@ void devtmpfs_init(void)
 	if (!dev_inode)
 		return;
 	dev_inode->i_type = VFS_IDIR;
+	dev_inode->i_mode = S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 	dev_inode->ops = &devtmpfs_dir_ops;
 	dev_inode->private_data = dev_dir;
 
@@ -398,6 +407,7 @@ void devtmpfs_init(void)
 	struct vfs_inode *mnt_inode = vfs_alloc_inode();
 	if (mnt_inode) {
 		mnt_inode->i_type = VFS_IDIR;
+		mnt_inode->i_mode = S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 		mnt_inode->ops = &devtmpfs_dir_ops;
 		mnt_inode->private_data = &devtmpfs_mnt_data;
 		devtmpfs_add_entry(root_inode, "mnt", mnt_inode);
@@ -414,6 +424,7 @@ struct vfs_inode *devtmpfs_create_mount(void)
 
 	devtmpfs_devmount_root.count = 0;
 	inode->i_type = VFS_IDIR;
+	inode->i_mode = S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 	inode->ops = &devtmpfs_dir_ops;
 	inode->private_data = &devtmpfs_devmount_root;
 

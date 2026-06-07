@@ -59,6 +59,27 @@ struct vfs_stat {
 #define VFS_IDIR     1
 #define VFS_ISYMLINK 2
 
+/* File type mode bits (POSIX-compatible, matches EXT2_S_IFxxx) */
+#define S_IFMT   0xF000  /* type mask */
+#define S_IFDIR  0x4000  /* directory */
+#define S_IFREG  0x8000  /* regular file */
+#define S_IFLNK  0xA000  /* symbolic link */
+#define S_IPERM  0x0FFF  /* permission bits mask */
+
+/* Permission bits (POSIX-compatible) */
+#define S_IRWXU  00700  /* owner rwx */
+#define S_IRUSR  00400  /* owner r */
+#define S_IWUSR  00200  /* owner w */
+#define S_IXUSR  00100  /* owner x */
+#define S_IRWXG  00070  /* group rwx */
+#define S_IRGRP  00040  /* group r */
+#define S_IWGRP  00020  /* group w */
+#define S_IXGRP  00010  /* group x */
+#define S_IRWXO  00007  /* other rwx */
+#define S_IROTH  00004  /* other r */
+#define S_IWOTH  00002  /* other w */
+#define S_IXOTH  00001  /* other x */
+
 /* Open flags (Linux-compatible) */
 #define O_RDONLY    0
 #define O_WRONLY    1
@@ -94,12 +115,16 @@ struct vfs_inode_ops {
 	int (*readlink)(struct vfs_inode *inode, char *buf,
 			uint32_t size);
 	int (*ioctl)(struct vfs_inode *inode, int cmd, void *arg);
+	int (*chmod)(struct vfs_inode *inode, uint16_t mode);
+	int (*rename)(struct vfs_inode *old_parent, const char *old_name,
+		      struct vfs_inode *new_parent, const char *new_name);
 };
 
 struct vfs_inode {
 	uint32_t i_no;
 	uint32_t i_size;
 	uint16_t i_type;
+	uint16_t i_mode;
 	const struct vfs_inode_ops *ops;
 	void *private_data;
 };
@@ -128,6 +153,8 @@ int vfs_unlink(const char *path);
 int vfs_symlink(const char *target, const char *path);
 int vfs_readlink(const char *path, char *buf, uint32_t size);
 int vfs_access(const char *path);
+int vfs_chmod(const char *path, uint16_t mode);
+int vfs_rename(const char *old_path, const char *new_path);
 void vfs_split_path(const char *path, char *dir_out, int dir_size,
 		    char *name_out, int name_size);
 

@@ -24,6 +24,9 @@ static int ext2_symlink(struct vfs_inode *parent, const char *name,
 			const char *target);
 static int ext2_readlink_op(struct vfs_inode *inode, char *buf,
 			    uint32_t size);
+static int ext2_chmod(struct vfs_inode *inode, uint16_t mode);
+static int ext2_rename(struct vfs_inode *old_parent, const char *old_name,
+		       struct vfs_inode *new_parent, const char *new_name);
 
 static struct vfs_inode_ops ext2_file_ops = {
 	.read      = ext2_inode_read,
@@ -37,6 +40,7 @@ static struct vfs_inode_ops ext2_file_ops = {
 	.unlink    = 0,
 	.symlink   = 0,
 	.readlink  = 0,
+	.chmod     = ext2_chmod,
 };
 
 static struct vfs_inode_ops ext2_dir_ops = {
@@ -51,6 +55,8 @@ static struct vfs_inode_ops ext2_dir_ops = {
 	.unlink    = ext2_unlink,
 	.symlink   = ext2_symlink,
 	.readlink  = 0,
+	.chmod     = ext2_chmod,
+	.rename    = ext2_rename,
 };
 
 static struct vfs_inode_ops ext2_symlink_ops = {
@@ -783,6 +789,7 @@ static struct vfs_inode *ext2_lookup(struct vfs_inode *dir, const char *name)
 				child_data->fs = fs;
 				child->private_data = child_data;
 				child->i_size = raw_child.size;
+				child->i_mode = raw_child.mode;
 
 				if ((raw_child.mode & EXT2_S_IFMT) ==
 				    EXT2_S_IFDIR) {
@@ -854,7 +861,7 @@ static int ext2_add_entry(struct vfs_inode *dir, const char *name,
 
 		struct ext2_inode new_raw;
 		memset(&new_raw, 0, sizeof(new_raw));
-		new_raw.mode = EXT2_S_IFREG | 0644;
+		new_raw.mode = EXT2_S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 		new_raw.uid = 0;
 		new_raw.gid = 0;
 		new_raw.size = 0;
@@ -1111,7 +1118,7 @@ static int ext2_mkdir(struct vfs_inode *parent, const char *name)
 		return -1;
 
 	memset(&new_raw, 0, sizeof(new_raw));
-	new_raw.mode = EXT2_S_IFDIR | 0755;
+	new_raw.mode = EXT2_S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 	new_raw.uid = 0;
 	new_raw.gid = 0;
 	new_raw.links = 2;  /* . and .. plus parent's entry */
@@ -1409,7 +1416,7 @@ static int ext2_symlink(struct vfs_inode *parent, const char *name,
 		return -1;
 
 	memset(&new_raw, 0, sizeof(new_raw));
-	new_raw.mode = 0120777; /* symlink + 0777 */
+	new_raw.mode = EXT2_S_IFLNK | S_IRWXU | S_IRWXG | S_IRWXO;
 	new_raw.uid = 0;
 	new_raw.gid = 0;
 	new_raw.links = 1;
@@ -1508,6 +1515,113 @@ static int ext2_readlink_op(struct vfs_inode *inode, char *buf,
 }
 
 /* ---------------------------------------------------------------
+ * chmod
+ * --------------------------------------------------------------- */
+
+static int ext2_chmod(struct vfs_inode *inode, uint16_t mode)
+{
+	struct ext2_inode_data *data;
+	struct ext2_inode raw;
+
+	data = (struct ext2_inode_data *)inode->private_data;
+	if (!data)
+		return -1;
+
+	if (ext2_read_inode(data->fs, data->inode_no, &raw) < 0)
+		return -1;
+
+	/* Preserve file type bits, set permission bits */
+	raw.mode = (raw.mode & EXT2_S_IFMT) | (mode & ~EXT2_S_IFMT);
+
+	if (ext2_write_inode(data->fs, data->inode_no, &raw) < 0)
+		return -1;
+
+	return 0;
+}
+
+/* ---------------------------------------------------------------
+ * rename
+ * --------------------------------------------------------------- */
+
+static int ext2_rename(struct vfs_inode *old_parent, const char *old_name,
+		       struct vfs_inode *new_parent, const char *new_name)
+{
+	struct ext2_inode_data *pdata, *npdata;
+	struct vfs_inode *child;
+	struct ext2_inode child_raw;
+	int is_dir;
+
+	pdata = (struct ext2_inode_data *)old_parent->private_data;
+	npdata = (struct ext2_inode_data *)new_parent->private_data;
+	if (!pdata || !npdata)
+		return -1;
+
+	/* Look up the child */
+	child = ext2_lookup(old_parent, old_name);
+	if (!child)
+		return -1;
+
+	is_dir = (child->i_type == VFS_IDIR);
+
+	/* Same name in same directory is a no-op */
+	if (old_parent == new_parent && strcmp(old_name, new_name) == 0)
+		return 0;
+
+	/* Add entry to new parent first */
+	if (ext2_add_entry(new_parent, new_name, child) < 0)
+		return -1;
+
+	/* Remove from old parent */
+	if (ext2_remove_entry(old_parent, old_name) < 0) {
+		ext2_remove_entry(new_parent, new_name);
+		return -1;
+	}
+
+	/* Directory-specific updates */
+	if (is_dir && old_parent != new_parent) {
+		struct ext2_inode parent_raw, new_parent_raw;
+
+		/* Decrement old parent link count */
+		if (ext2_read_inode(pdata->fs, pdata->inode_no,
+				    &parent_raw) == 0) {
+			parent_raw.links--;
+			ext2_write_inode(pdata->fs, pdata->inode_no,
+					 &parent_raw);
+		}
+
+		/* Increment new parent link count */
+		if (ext2_read_inode(npdata->fs, npdata->inode_no,
+				    &new_parent_raw) == 0) {
+			new_parent_raw.links++;
+			ext2_write_inode(npdata->fs, npdata->inode_no,
+					 &new_parent_raw);
+		}
+
+		/* Update ".." entry in child directory */
+		uint32_t child_inode_no;
+		child_inode_no = ((struct ext2_inode_data *)
+				  child->private_data)->inode_no;
+		if (ext2_read_inode(pdata->fs, child_inode_no,
+				    &child_raw) == 0) {
+			uint32_t first_block = ext2_inode_bmap(
+				pdata->fs, &child_raw, 0);
+			if (first_block) {
+				ext2_read_block(pdata->fs, first_block,
+						ext2_buf);
+				struct ext2_dirent *de;
+				de = (struct ext2_dirent *)
+					(ext2_buf + 12);
+				de->inode = npdata->inode_no;
+				ext2_write_block(pdata->fs, first_block,
+						 ext2_buf);
+			}
+		}
+	}
+
+	return 0;
+}
+
+/* ---------------------------------------------------------------
  * Mount
  * --------------------------------------------------------------- */
 
@@ -1572,6 +1686,7 @@ struct vfs_inode *ext2_mount(struct block_device *dev)
 		return 0;
 	}
 	root->i_size = raw_root.size;
+	root->i_mode = raw_root.mode;
 
 	return root;
 }

@@ -997,6 +997,84 @@ sys_readlink(const char *path, char *buf, int size)
 	return vfs_readlink(abs_path, buf, (uint32_t)size);
 }
 
+/* --- sync --- */
+int sys_sync(void)
+{
+	/* No write cache — nothing to flush */
+	return 0;
+}
+
+/* --- dup --- */
+int sys_dup(int oldfd)
+{
+	struct task *current = scheduler_get_current();
+	int newfd;
+
+	if (!current)
+		return -1;
+	if (oldfd < 0 || oldfd >= VFS_MAX_FD)
+		return -1;
+	if (!current->fd_table[oldfd])
+		return -1;
+
+	for (newfd = 0; newfd < VFS_MAX_FD; newfd++) {
+		if (!current->fd_table[newfd])
+			return sys_dup2(oldfd, newfd);
+	}
+
+	return -1;
+}
+
+/* --- times --- */
+struct k_tms {
+	int32_t tms_utime;
+	int32_t tms_stime;
+	int32_t tms_cutime;
+	int32_t tms_cstime;
+};
+
+int sys_times(struct k_tms *buf)
+{
+	uint32_t ticks = scheduler_get_tick_count();
+
+	if (buf) {
+		buf->tms_utime = (int32_t)ticks;
+		buf->tms_stime = 0;
+		buf->tms_cutime = 0;
+		buf->tms_cstime = 0;
+	}
+
+	return (int)ticks;
+}
+
+/* --- chmod --- */
+int sys_chmod(const char *path, int mode)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path)
+		return -1;
+
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_chmod(abs_path, (uint16_t)mode);
+}
+
+/* --- rename --- */
+int sys_rename(const char *old_path, const char *new_path)
+{
+	struct task *current = scheduler_get_current();
+	char abs_old[512], abs_new[512];
+
+	if (!current || !old_path || !new_path)
+		return -1;
+
+	build_abs_path(current, old_path, abs_old, sizeof(abs_old));
+	build_abs_path(current, new_path, abs_new, sizeof(abs_new));
+
+	return vfs_rename(abs_old, abs_new);
+}
+
 /* --- Time syscalls --- */
 
 /* Kernel-side timeval/timespec (matches libc <sys/time.h>) */
@@ -1132,6 +1210,11 @@ syscall_init(void)
 	systemcall_table[SYS_time]    = (uint32_t)sys_time;
 	systemcall_table[SYS_gettimeofday]=(uint32_t)sys_gettimeofday;
 	systemcall_table[SYS_nanosleep] =(uint32_t)sys_nanosleep;
+	systemcall_table[SYS_sync]     = (uint32_t)sys_sync;
+	systemcall_table[SYS_dup]      = (uint32_t)sys_dup;
+	systemcall_table[SYS_chmod]    = (uint32_t)sys_chmod;
+	systemcall_table[SYS_rename]   = (uint32_t)sys_rename;
+	systemcall_table[SYS_times]    = (uint32_t)sys_times;
 	systemcall_table[SYS_kill]      = (uint32_t)sys_kill;
 	systemcall_table[SYS_signal]    = (uint32_t)sys_signal;
 	systemcall_table[SYS_rt_sigaction]  = (uint32_t)sys_rt_sigaction;

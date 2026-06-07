@@ -53,6 +53,7 @@ struct vfs_inode *vfs_alloc_inode(void)
 			vfs_inodes[i].i_no = vfs_next_ino++;
 			vfs_inodes[i].i_size = 0;
 			vfs_inodes[i].i_type = VFS_IFILE;
+			vfs_inodes[i].i_mode = 0;
 			vfs_inodes[i].ops = 0;
 			vfs_inodes[i].private_data = 0;
 			return &vfs_inodes[i];
@@ -433,24 +434,28 @@ static int vfs_file_read(struct file *f, void *buf, size_t nbyte)
 
 void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
 {
-	unsigned short mode = 0;
+		unsigned short mode = 0;
 
 	if (!inode || !buf)
 		return;
 
-	switch (inode->i_type) {
-	case VFS_IFILE:
-		mode = 0100644;  /* S_IFREG | S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH */
-		break;
-	case VFS_IDIR:
-		mode = 040755;   /* S_IFDIR | S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH */
-		break;
-	case VFS_ISYMLINK:
-		mode = 0120777;  /* S_IFLNK | 0777 */
-		break;
-	default:
-		mode = 0100644;
-		break;
+	if (inode->i_mode) {
+		mode = inode->i_mode;
+	} else {
+		switch (inode->i_type) {
+		case VFS_IFILE:
+			mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+			break;
+		case VFS_IDIR:
+			mode = S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+			break;
+		case VFS_ISYMLINK:
+			mode = S_IFLNK | S_IRWXU | S_IRWXG | S_IRWXO;
+			break;
+		default:
+			mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+			break;
+		}
 	}
 
 	buf->st_dev     = 0;
@@ -673,6 +678,73 @@ int vfs_readlink(const char *path, char *buf, uint32_t size)
 		return -1;
 
 	return inode->ops->readlink(inode, buf, size);
+}
+
+int vfs_chmod(const char *path, uint16_t mode)
+{
+	struct vfs_inode *inode;
+	uint16_t full_mode;
+
+	if (!path)
+		return -1;
+	inode = vfs_resolve_path(path);
+	if (!inode)
+		return -1;
+
+	/* Preserve file type bits from existing i_mode, set permission bits */
+	full_mode = (inode->i_mode & S_IFMT) | (mode & S_IPERM);
+	inode->i_mode = full_mode;
+
+	if (inode->ops && inode->ops->chmod)
+		return inode->ops->chmod(inode, full_mode);
+
+	return 0;
+}
+
+int vfs_rename(const char *old_path, const char *new_path)
+{
+	char old_dir[256], old_name[64];
+	char new_dir[256], new_name[64];
+	struct vfs_inode *old_parent, *new_parent;
+
+	if (!old_path || !new_path)
+		return -1;
+
+	vfs_split_path(old_path, old_dir, sizeof(old_dir),
+		       old_name, sizeof(old_name));
+	vfs_split_path(new_path, new_dir, sizeof(new_dir),
+		       new_name, sizeof(new_name));
+
+	old_parent = vfs_resolve_path(old_dir);
+	new_parent = vfs_resolve_path(new_dir);
+
+	if (!old_parent || !new_parent)
+		return -1;
+
+	/* Same filesystem with dedicated rename op */
+	if (old_parent->ops == new_parent->ops
+	    && old_parent->ops && old_parent->ops->rename)
+		return old_parent->ops->rename(old_parent, old_name,
+					       new_parent, new_name);
+
+	/* Generic fallback: add_entry + remove_entry */
+	{
+		struct vfs_inode *child;
+		child = old_parent->ops->lookup(old_parent, old_name);
+		if (!child)
+			return -1;
+		if (new_parent->ops->add_entry(new_parent, new_name,
+					       child) < 0)
+			return -1;
+		if (old_parent->ops->remove_entry(old_parent,
+						  old_name) < 0) {
+			new_parent->ops->remove_entry(new_parent,
+						      new_name);
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 int vfs_access(const char *path)
