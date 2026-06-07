@@ -26,7 +26,7 @@ qemu_start_with_disk || { fail "QEMU failed to start"; exit 1; }
 
 # --- Subtest 1: Boot ---
 if wait_for_boot 15; then
-	pass "Boot message 'Illuminatrix' found (kernel boots OK)"
+	pass "Boot message 'HomunculOS' found (kernel boots OK)"
 else
 	fail "Boot message not found (timeout 15s)"
 	qemu_stop

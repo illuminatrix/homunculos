@@ -19,7 +19,7 @@
 
 void welcome()
 {
-	printf("Illuminatrix Kernel!\n");
+	printf("HomunculOS Kernel!\n");
 }
 
 /* Parse "key=value" from a kernel command line string.

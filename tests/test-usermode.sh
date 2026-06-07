@@ -26,7 +26,7 @@ errors=0
 
 # --- Subtest 1: Boot + Welcome ---
 if wait_for_boot 15; then
-	pass "Boot message 'Illuminatrix' found (ring 0→3 transition OK)"
+	pass "Boot message 'HomunculOS' found (ring 0→3 transition OK)"
 else
 	dump_head=$(vga_text | head -c 80)
 	fail "Boot message not found. VGA: [$dump_head]"

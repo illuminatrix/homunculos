@@ -1,7 +1,7 @@
 Contributing
 ============
 
-Thank you for your interest in contributing to Illuminatrix!
+Thank you for your interest in contributing to HomunculOS!
 
 For team members
 ----------------

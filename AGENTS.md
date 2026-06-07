@@ -1,4 +1,4 @@
-# Illuminatrix -- Agent Context
+# HomunculOS -- Agent Context
 
 ## Build System
 
@@ -51,7 +51,7 @@ _start (arch/i386/kernel_head.S)
      6. devtmpfs_init()           -- bootstrap devtmpfs root inode, create /dev + /mnt dirs
      7. vfs_create_device_nodes() + hello_driver_init()
                                -- populate bootstrap /dev (needed for early printf)
-     8. welcome()              -- printf("Illuminatrix Kernel!\n")
+     8. welcome()              -- printf("HomunculOS Kernel!\n")
      9. init_mm(mmap, len)     -- identity paging 16MB, frame bitmap from multiboot map
     10. gdt_init()             -- GDT: ring 0/3 code+data + TSS
     11. ata_init()             -- ATA PIO detection (registers block devices)

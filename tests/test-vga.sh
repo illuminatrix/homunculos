@@ -19,7 +19,7 @@ fi
 sleep 2
 
 # Test 1: Welcome message in VGA
-if vga_contains "Illuminatrix Kernel"; then
+if vga_contains "HomunculOS Kernel"; then
 	pass "Welcome message present in VGA text buffer"
 else
 	vga_text | head -c 80 | cat -A

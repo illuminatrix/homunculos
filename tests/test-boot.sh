@@ -9,7 +9,7 @@ echo "=== Boot Test ==="
 qemu_start || { fail "QEMU failed to start"; exit 1; }
 
 if wait_for_boot 15; then
-	pass "Boot message 'Illuminatrix Kernel!' found in VGA"
+	pass "Boot message 'HomunculOS Kernel!' found in VGA"
 else
 	dump_head=$(vga_text | head -c 80)
 	fail "Boot message not found. VGA: [$dump_head]"

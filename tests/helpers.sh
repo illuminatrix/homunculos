@@ -1,5 +1,5 @@
 #!/bin/bash
-# Common helpers for Illuminatrix integration tests
+# Common helpers for HomunculOS integration tests
 # All functions assume CWD is tests/
 
 export TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -128,7 +128,7 @@ wait_for_boot() {
 	local timeout="${1:-10}"
 	local waited=0
 	while [ $waited -lt $timeout ]; do
-		if vga_contains "Illuminatrix" 2>/dev/null; then
+		if vga_contains "HomunculOS" 2>/dev/null; then
 			return 0
 		fi
 		sleep 1

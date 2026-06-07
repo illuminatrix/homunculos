@@ -670,8 +670,8 @@ sys_uname(struct sys_utsname *buf)
 	memset(buf->machine, 0, UTSNAME_LEN);
 	memset(buf->domainname, 0, UTSNAME_LEN);
 
-	strncpy(buf->sysname, "Illuminatrix", UTSNAME_LEN - 1);
-	strncpy(buf->nodename, "illuminatrix", UTSNAME_LEN - 1);
+	strncpy(buf->sysname, "HomunculOS", UTSNAME_LEN - 1);
+	strncpy(buf->nodename, "homunculos", UTSNAME_LEN - 1);
 	strncpy(buf->release, "0.1.0", UTSNAME_LEN - 1);
 	strncpy(buf->version, "#1 Sat May 23 2026", UTSNAME_LEN - 1);
 	strncpy(buf->machine, "i686", UTSNAME_LEN - 1);

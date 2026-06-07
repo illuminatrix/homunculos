@@ -1,5 +1,5 @@
-Illuminatrix
-============
+HomunculOS
+==========
 
 A minimal i386 (32-bit) kernel with ext2 filesystem, devtmpfs, ATA PIO, PS/2
 keyboard, VGA text-mode display, multitasking, ELF execution, and an
