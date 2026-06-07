@@ -1,123 +1,139 @@
-TODO: Toybox Porting
+TODO: Diet libc + sbase Porting
 
-Toybox (https://github.com/landley/toybox) is the target userspace.
-The kernel needs new syscalls and VFS features to run it.
+The target userspace is:
+  - dietlibc (https://github.com/ensc/dietlibc) -- minimal libc, uses
+    Linux i386 syscall conventions directly.
+  - sbase (https://github.com/michaelforney/sbase) -- suckless POSIX
+    unix tools (cat, ls, cp, mv, echo, grep, sed, etc.)
 
 Build (on Linux host, not in-kernel):
-  CROSS_COMPILE=i686-elf- make defconfig toybox
-  Build statically against musl; our ELF loader handles the result.
+  - Cross-compile dietlibc: make CC="i686-elf-gcc -m32" ARCH=i386
+  - Cross-compile sbase: CC="i686-elf-gcc" AR="i686-elf-ar" make
+  - Both are static; our ELF loader handles the result.
 
-===== DONE: All P0-P5 prerequisites =====
+Our syscall numbers already match Linux i386 for the ones we have.
+Key differences from the old Toybox/musl plan:
+  - dietlibc uses `socketcall` (102) for networking, not individual
+    socket syscalls.
+  - dietlibc uses old `signal` (48) and `sigaction` (67) syscalls
+    alongside the rt_ variants.
+  - sbase is simpler than Toybox -- no xattrs, capabilities, or
+    complicated /proc requirements.
+  - dietlibc has its own start.S and crt; needs environ/auxv setup.
+
+===== DONE: All prerequisites for basic shell + filesystem =====
 
 [x] brk/sbrk, stat/fstat/lstat, getdents, ioctl, chdir/getcwd
 [x] getpid/getppid, lseek, uname
-[x] pipe, dup2, waitpid options, exec with argv/envp
+[x] pipe, dup2, waitpid, exec with argv/envp
 [x] ext2 write, open() flags, access, mkdir/rmdir, unlink, symlink/readlink
 [x] kill, signal/sigaction, SIGINT, SIGCHLD, sigreturn
 [x] gettimeofday, time, nanosleep
 [x] exit_group, reboot() magic args, /dev/null, /dev/tty, environ
 
-===== P6: Syscall numbering fix (must fix before musl works) =====
+Note: environ is set up in the user stack by sys_exec (Linux i386 ABI).
+dietlibc's start.S expects environ from the stack, which works.
 
-[ ] Fix syscall numbers to match Linux i386:
-    sched_yield:  24 -> 158  (Linux 158)
-    unlink:       87 -> 10   (Linux 10)
-    rt_sigaction: 67 -> 174  (Linux 174)
-    rt_sigprocmask: 126 -> 175 (Linux 175)
-    Status: DONE in syscall.h, libc wrappers, dispatch table -- verify.
+===== P1: Core missing syscalls (needed for dietlibc + basic sbase) =====
 
-===== P7: Critical missing syscalls (musl stdio/process) =====
+[ ] rename     -- SYS_rename (38).  mv, cp commands.
+[ ] chmod      -- SYS_chmod (15).  chmod command, file perms.
+[ ] fchmod     -- SYS_fchmod (94).  cp -p, install.
+[ ] link       -- SYS_link (9).  ln hard links.
+[ ] mknod      -- SYS_mknod (14).  mknod command.
+[ ] dup        -- SYS_dup (41).  dup() for fd duplication.
+[ ] fcntl64    -- SYS_fcntl64 (221).  F_DUPFD, F_SETFD, etc.  Used by
+    dietlibc internal stdio, xopen() in sbase.
+[ ] times      -- SYS_times (43).  time command.
+[ ] sync       -- SYS_sync (36).  sync command.
+[ ] fsync      -- SYS_fsync (118).  File sync.
+[ ] truncate64 -- SYS_truncate64 (193).  dd, cp truncation.
+[ ] ftruncate64 -- SYS_ftruncate64 (194).  File truncation.
 
-[ ] mmap2     -- SYS_mmap2 (192).  musl malloc, ELF loading, shared mem.
-    Allocate frames + map at requested VA.  Needed for brk fallback
-    and mmap(PROT_NONE) guard pages.
-[ ] munmap    -- SYS_munmap (91).  Free mapped pages.
-[ ] mprotect  -- SYS_mprotect (125).  Stack guard pages, RELRO.
-[ ] readv     -- SYS_readv (145).  musl __stdio_read() (buffered stdin).
-[ ] writev    -- SYS_writev (146).  musl __stdio_write() (buffered stdout).
-    Both: iterate iovec array, call vfs_write/read per segment.
-[ ] fcntl64   -- SYS_fcntl64 (221).  F_SETFD, F_GETFD, F_SETFL (non-block),
-    F_DUPFD.  Used by almost everything.
-[ ] poll      -- SYS_poll (168).  Toybox xpoll(), scan_key(), pollinate().
-    Block on multiple fds with timeout.  Stub: always return 1 fd ready.
-[ ] clock_gettime -- SYS_clock_gettime (265).  musl timing, Toybox
-    millitime().  CLOCK_REALTIME + CLOCK_MONOTONIC from PIT tick count.
-[ ] getuid32  -- SYS_getuid32 (199).  getuid(), id command, permissions.
-    Stub: return 0.
-[ ] geteuid32 -- SYS_geteuid32 (201).  Stub: return 0.
-[ ] getgid32  -- SYS_getgid32 (200).  Stub: return 0.
-[ ] getegid32 -- SYS_getegid32 (202).  Stub: return 0.
-[ ] set_tid_address -- SYS_set_tid_address (258).  musl _Fork() needs this.
-    Stub: store pointer, return 0 / current PID.
-[ ] futex     -- SYS_futex (240).  musl thread sync (__wait/__wake).
-    Stub: always return 0 (no actual blocking).
+===== P2: Memory mapping (needed by dietlibc malloc/stdio) =====
 
-===== P8: Standard POSIX syscalls (many commands need these) =====
+[ ] mmap2      -- SYS_mmap2 (192).  dietlibc alloc() / mmap() wrapper
+    uses mmap2 for large allocations.  Also needed for MAP_ANONYMOUS
+    pages.  Stub: allocate frame + map at requested VA.
+[ ] munmap     -- SYS_munmap (91).  Free mapped pages.
+[ ] mprotect   -- SYS_mprotect (125).  Stack guard pages, RELRO.
 
-[ ] rename    -- SYS_rename (38).  mv, cp, install.
-[ ] chmod     -- SYS_chmod (15).  chmod command, file perms.
-[ ] fchmod    -- SYS_fchmod (94).  copy_tempfile().
-[ ] setsid    -- SYS_setsid (66).  xvdaemon(), setsid command.
-[ ] setpgid   -- SYS_setpgid (57).  Job control.
-[ ] umask     -- SYS_umask (60).  mkdir -m, file creation modes.
-[ ] vfork     -- SYS_vfork (190).  musl vfork(), Toybox XVFORK macro.
-[ ] utimensat -- SYS_utimensat (320).  touch, cp -p, install.
-[ ] statfs64  -- SYS_statfs64 (268).  df command, xgetmountlist().
-[ ] fstatfs64 -- SYS_fstatfs64 (269).  mount list infrastructure.
-[ ] ftruncate64 -- SYS_ftruncate64 (194).  cp, dd, truncation.
-[ ] link      -- SYS_link (9).  ln hard links.
-[ ] mknod     -- SYS_mknod (14).  mknod command.
-[ ] sync      -- SYS_sync (36).  sync command.
-[ ] fsync     -- SYS_fsync (118).  File sync.
+===== P3: uid/gid + process management =====
 
-===== P9: *at syscalls (dirtree.c traversal) =====
+[ ] getuid32   -- SYS_getuid32 (199).  Stub: return 0.
+[ ] getgid32   -- SYS_getgid32 (200).  Stub: return 0.
+[ ] geteuid32  -- SYS_geteuid32 (201).  Stub: return 0.
+[ ] getegid32  -- SYS_getegid32 (202).  Stub: return 0.
+[ ] setuid32   -- SYS_setuid32 (213).  Stub: return 0.
+[ ] setgid32   -- SYS_setgid32 (214).  Stub: return 0.
+[ ] setsid     -- SYS_setsid (66).  setsid command, daemonize.
+[ ] setpgid    -- SYS_setpgid (57).  Job control.
+[ ] umask      -- SYS_umask (60).  Default file creation mode.
+[ ] vfork      -- SYS_vfork (190).  BSD vfork().
 
-[ ] openat    -- SYS_openat (295).  dirtree.c directory traversal.
-[ ] readlinkat -- SYS_readlinkat (305).  xreadlinkat().
-[ ] fstatat64 -- SYS_fstatat64 (300).  dirtree_add_node() stat calls.
-[ ] mkdirat   -- SYS_mkdirat (296).  mkpathat().
-[ ] unlinkat  -- SYS_unlinkat (301).  delete_tempfile().
-[ ] renameat  -- SYS_renameat (302).  Directory-level rename.
-[ ] fchmodat  -- SYS_fchmodat (306).  wfchmodat().
+===== P4: I/O multiplexing + time + signal =====
 
-===== P10: Networking (netcat, telnet, wget, ifconfig) =====
+[ ] select     -- SYS_select (82) or _newselect (142).  select() used
+    by sbase, many POSIX programs.  Stub: poll stdin.
+[ ] poll       -- SYS_poll (168).  poll() equivalent.
+[ ] clock_gettime -- SYS_clock_gettime (265).  CLOCK_REALTIME +
+    CLOCK_MONOTONIC from PIT tick count.
+[ ] sigaction  -- SYS_sigaction (67) [old].  dietlibc uses old sigaction
+    by default (not just rt_sigaction 174).  Need old-style handler too.
+[ ] sigprocmask -- SYS_sigprocmask (126) [old].  Same reason.
 
-[ ] socketcall -- SYS_socketcall (102) or individual socket syscalls.
-    At minimum: socket (359), bind (361), connect (362), listen (363),
-    accept4 (364), sendto (369), recvfrom (371), shutdown (373),
-    setsockopt (366), getsockopt (365), getsockname (367),
-    getpeername (368), sendmsg (370), recvmsg (372).
+===== P5: Networking (dietlibc socketcall) =====
 
-===== P11: /proc filesystem =====
+[ ] socketcall -- SYS_socketcall (102).  dietlibc on i386 uses the
+    socketcall multiplexer, NOT individual socket syscalls.
+    Subs: socket, bind, connect, listen, accept4, sendto, recvfrom,
+    sendmsg, recvmsg, shutdown, setsockopt, getsockopt, getsockname,
+    getpeername, socketpair.
+    Implement as a single dispatch function in the kernel.
+
+===== P6: /proc filesystem (many sbase tools want it) =====
 
 [ ] Minimal procfs mounted at /proc.
-    At minimum:
+    Minimum entries:
       /proc/self/exe    -- symlink to running executable
       /proc/PID/cmdline -- command line args
       /proc/PID/exe     -- symlink to executable
       /proc/mounts      -- mount table
       /proc/uptime      -- system uptime
       /proc/stat        -- CPU stats
-    Needed by: ps, killall, pidof, pgrep, mount, df, uptime, top.
+    Needed by: ps, killall, mount, df, uptime, top (if ported).
 
-===== P12: TLS / Threading =====
+===== P7: *at syscalls (openat, mkdirat, etc.) =====
 
-[ ] set_thread_area  -- SYS_set_thread_area (243).  musl TLS via %gs.
-    Option A: implement set_thread_area (needs LDT support).
-    Option B: build musl with -DSYSCALL_NO_TLS (loses threading).
-    Option C: use GDT entry for per-task TLS (simpler, 1 task at a time).
+[ ] openat     -- SYS_openat (295).
+[ ] readlinkat -- SYS_readlinkat (305).
+[ ] fstatat64  -- SYS_fstatat64 (300).
+[ ] mkdirat    -- SYS_mkdirat (296).
+[ ] unlinkat   -- SYS_unlinkat (301).
+[ ] renameat   -- SYS_renameat (302).
+[ ] fchmodat   -- SYS_fchmodat (306).
 
-===== P13: Nice-to-have =====
+Used by libc internal path traversal.  Lower priority since sbase
+mostly uses the non-at variants.
 
-[ ] getrandom  -- SYS_getrandom (355).  xgetrandom() prefers this;
-    fallback to /dev/urandom OK.
-[ ] sendfile64 -- SYS_sendfile64 (239).  Optimization for cp/dd.
+===== P8: Nice-to-have =====
+
+[ ] getrandom  -- SYS_getrandom (355).  xgetrandom() fallback.
 [ ] getrusage  -- SYS_getrusage (77).  time command.
-[ ] times      -- SYS_times (43).  times command.
-[ ] alarm      -- SYS_alarm (27).  alarm().
-[ ] sigaltstack -- SYS_sigaltstack (186).  SA_ONSTACK signal handling.
+[ ] alarm      -- SYS_alarm (27).  alarm(), sleep().
+[ ] sigaltstack -- SYS_sigaltstack (186).  SA_ONSTACK.
 [ ] personality -- SYS_personality (136).  Exec personality.
-[ ] prctl      -- SYS_prctl (172).  Process control.
-[ ] truncate64 -- SYS_truncate64 (193).  File truncation.
 [ ] dup3       -- SYS_dup3 (330).  Modern dup with cloexec.
 [ ] pipe2      -- SYS_pipe2 (331).  Modern pipe with cloexec.
+[ ] utimensat  -- SYS_utimensat (320).  touch, cp -p.
+[ ] statfs64   -- SYS_statfs64 (268).  df command.
+[ ] fstatfs64  -- SYS_fstatfs64 (269).  mount list.
+[ ] sendfile64 -- SYS_sendfile64 (239).  cp/dd optimization.
+
+===== P9: TLS / Threading (long-term) =====
+
+[ ] set_thread_area -- SYS_set_thread_area (243).  dietlibc thread-
+    local storage via %gs.  May need LDT support or GDT-based TLS.
+[ ] gettid     -- SYS_gettid (224).  Thread ID.
+[ ] futex      -- SYS_futex (240).  Thread sync primitives.
+[ ] set_tid_address -- SYS_set_tid_address (258).  Thread cleanup.
