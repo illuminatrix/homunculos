@@ -38,6 +38,9 @@ debug: kernel.bin
 run: kernel.bin $(DISK_IMG)
 	$(QEMU_CMD)
 
+run-gui: kernel.bin $(DISK_IMG)
+	qemu-system-i386 -kernel kernel.bin -drive file=$(DISK_IMG),format=raw,if=ide -serial file:serial.log -monitor unix:qemu-monitor.sock,server,nowait -append "$(CMDLINE)"
+
 run-debug: kernel.bin
 	$(QEMU_CMD) -S -s
 
