@@ -56,6 +56,7 @@ struct vfs_inode *vfs_alloc_inode(void)
 			vfs_inodes[i].i_mode = 0;
 			vfs_inodes[i].ops = 0;
 			vfs_inodes[i].private_data = 0;
+			vfs_inodes[i].i_rdev = 0;
 			return &vfs_inodes[i];
 		}
 	}
@@ -439,7 +440,7 @@ void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
 	if (!inode || !buf)
 		return;
 
-	if (inode->i_mode) {
+		if (inode->i_mode) {
 		mode = inode->i_mode;
 	} else {
 		switch (inode->i_type) {
@@ -451,6 +452,12 @@ void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
 			break;
 		case VFS_ISYMLINK:
 			mode = S_IFLNK | S_IRWXU | S_IRWXG | S_IRWXO;
+			break;
+		case VFS_IFCHR:
+			mode = S_IFCHR | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+			break;
+		case VFS_IFBLK:
+			mode = S_IFBLK | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 			break;
 		default:
 			mode = S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -464,7 +471,7 @@ void vfs_inode_stat(struct vfs_inode *inode, struct vfs_stat *buf)
 	buf->st_nlink   = (inode->i_type == VFS_IDIR) ? 2 : 1;
 	buf->st_uid     = 0;
 	buf->st_gid     = 0;
-	buf->st_rdev    = 0;
+	buf->st_rdev    = inode->i_rdev;
 	buf->st_size    = inode->i_size;
 	buf->st_blksize = 1024;
 	buf->st_blocks  = (inode->i_size + 511) / 512;
@@ -688,6 +695,26 @@ int vfs_link(const char *old_path, const char *new_path)
 		return -1;
 
 	return parent->ops->link(parent, name, existing);
+}
+
+int vfs_mknod(const char *path, uint16_t mode, dev_t dev)
+{
+	char dir_path[256];
+	char name[64];
+	struct vfs_inode *parent;
+
+	if (!path)
+		return -1;
+
+	vfs_split_path(path, dir_path, sizeof(dir_path),
+		       name, sizeof(name));
+
+	parent = vfs_resolve_path(dir_path);
+	if (!parent || parent->i_type != VFS_IDIR
+	    || !parent->ops || !parent->ops->mknod)
+		return -1;
+
+	return parent->ops->mknod(parent, name, mode, dev);
 }
 
 int vfs_readlink(const char *path, char *buf, uint32_t size)

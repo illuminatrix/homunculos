@@ -9,6 +9,12 @@
 #define STDERR_FILENO 2
 #define VFS_MAX_FD    16
 
+/* Device ID type: 8-bit major, 8-bit minor */
+typedef uint32_t dev_t;
+#define MAJOR(dev)  (((dev) >> 8) & 0xFF)
+#define MINOR(dev)  ((dev) & 0xFF)
+#define MKDEV(maj, min) ((((uint32_t)(maj)) << 8) | ((uint32_t)(min) & 0xFF))
+
 struct file;
 
 struct vfs_ops {
@@ -58,12 +64,16 @@ struct vfs_stat {
 #define VFS_IFILE    0
 #define VFS_IDIR     1
 #define VFS_ISYMLINK 2
+#define VFS_IFCHR    3
+#define VFS_IFBLK    4
 
 /* File type mode bits (POSIX-compatible, matches EXT2_S_IFxxx) */
 #define S_IFMT   0xF000  /* type mask */
 #define S_IFDIR  0x4000  /* directory */
 #define S_IFREG  0x8000  /* regular file */
 #define S_IFLNK  0xA000  /* symbolic link */
+#define S_IFCHR  0x2000  /* character device */
+#define S_IFBLK  0x6000  /* block device */
 #define S_IPERM  0x0FFF  /* permission bits mask */
 
 /* Permission bits (POSIX-compatible) */
@@ -112,6 +122,8 @@ struct vfs_inode_ops {
 	int (*unlink)(struct vfs_inode *parent, const char *name);
 	int (*symlink)(struct vfs_inode *parent, const char *name,
 		       const char *target);
+	int (*mknod)(struct vfs_inode *parent, const char *name,
+		     uint16_t mode, dev_t dev);
 	int (*readlink)(struct vfs_inode *inode, char *buf,
 			uint32_t size);
 	int (*ioctl)(struct vfs_inode *inode, int cmd, void *arg);
@@ -129,6 +141,7 @@ struct vfs_inode {
 	uint16_t i_mode;
 	const struct vfs_inode_ops *ops;
 	void *private_data;
+	dev_t i_rdev;
 };
 
 #define VFS_MAX_INODES     256
@@ -154,6 +167,7 @@ int vfs_rmdir(const char *path);
 int vfs_unlink(const char *path);
 int vfs_symlink(const char *target, const char *path);
 int vfs_link(const char *old_path, const char *new_path);
+int vfs_mknod(const char *path, uint16_t mode, dev_t dev);
 int vfs_readlink(const char *path, char *buf, uint32_t size);
 int vfs_access(const char *path);
 int vfs_chmod(const char *path, uint16_t mode);

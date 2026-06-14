@@ -46,6 +46,7 @@ struct stat {
 int stat(const char *path, struct stat *buf);
 int lstat(const char *path, struct stat *buf);
 int fstat(int fd, struct stat *buf);
+int mknod(const char *path, int mode, int dev);
 
 #ifdef __cplusplus
 }

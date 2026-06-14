@@ -31,6 +31,6 @@ static struct vfs_inode_ops null_file_ops = {
 
 static void null_init(void)
 {
-	devtmpfs_register_inode("null", &null_file_ops, 0, VFS_IFILE);
+	devtmpfs_register_inode("null", &null_file_ops, 0, VFS_IFCHR, MKDEV(1, 1));
 }
 VFS_DRIVER_INIT(null_init);

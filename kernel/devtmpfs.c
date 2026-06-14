@@ -17,6 +17,7 @@ struct devtmpfs_device {
 	char name[64];
 	int type;
 	uint16_t i_type;
+	dev_t dev;
 	/* For DEVTMPFS_DEVICE_INODE type */
 	const struct vfs_inode_ops *inode_ops;
 	void *private_data;
@@ -200,6 +201,73 @@ static int devtmpfs_mkdir(struct vfs_inode *parent, const char *name)
 	return devtmpfs_add_entry(parent, name, inode);
 }
 
+/* Null ops for device nodes created by mknod (no backing driver) */
+static int devtmpfs_dev_null_read(struct vfs_inode *inode, uint32_t offset,
+				  void *buf, uint32_t size)
+{
+	(void)inode; (void)offset; (void)buf; (void)size;
+	return -1;
+}
+
+static int devtmpfs_dev_null_write(struct vfs_inode *inode, uint32_t offset,
+				   const void *buf, uint32_t size)
+{
+	(void)inode; (void)offset; (void)buf; (void)size;
+	return -1;
+}
+
+static struct vfs_inode_ops devtmpfs_dev_null_ops = {
+	.read      = devtmpfs_dev_null_read,
+	.write     = devtmpfs_dev_null_write,
+	.readdir   = 0,
+	.lookup    = 0,
+	.add_entry = 0,
+	.remove_entry = 0,
+	.mkdir     = 0,
+	.rmdir     = 0,
+	.unlink    = 0,
+	.symlink   = 0,
+	.mknod     = 0,
+	.link      = 0,
+	.readlink  = 0,
+};
+
+static int devtmpfs_mknod(struct vfs_inode *parent, const char *name,
+			  uint16_t mode, dev_t dev)
+{
+	struct devtmpfs_dir *td;
+	struct vfs_inode *inode;
+
+	if (!parent || !name)
+		return -1;
+
+	td = (struct devtmpfs_dir *)parent->private_data;
+	if (td->count >= DEVTMPFS_MAX_ENTRIES)
+		return -1;
+
+	inode = vfs_alloc_inode();
+	if (!inode)
+		return -1;
+
+	uint16_t file_type = mode & S_IFMT;
+	if (file_type == S_IFCHR)
+		inode->i_type = VFS_IFCHR;
+	else if (file_type == S_IFBLK)
+		inode->i_type = VFS_IFBLK;
+	else {
+		vfs_free_inode(inode);
+		return -1;
+	}
+
+	inode->i_size = 0;
+	inode->i_mode = mode;
+	inode->i_rdev = dev;
+	inode->ops = &devtmpfs_dev_null_ops;
+	inode->private_data = 0;
+
+	return devtmpfs_add_entry(parent, name, inode);
+}
+
 static int devtmpfs_unlink(struct vfs_inode *parent, const char *name)
 {
 	return devtmpfs_remove_entry(parent, name);
@@ -277,6 +345,7 @@ static struct vfs_inode_ops devtmpfs_dir_ops = {
 	.rmdir     = devtmpfs_rmdir,
 	.unlink    = devtmpfs_unlink,
 	.symlink   = devtmpfs_symlink,
+	.mknod     = devtmpfs_mknod,
 	.link      = 0,
 	.readlink  = devtmpfs_readlink_op,
 };
@@ -285,44 +354,48 @@ static struct vfs_inode_ops devtmpfs_dir_ops = {
 
 void devtmpfs_register_vfs(const char *name,
 			   const struct vfs_ops *ops,
-			   void *private_data)
+			   void *private_data,
+			   dev_t dev)
 {
 	if (devtmpfs_device_count >= DEVTMPFS_MAX_DEVICES || !name || !ops)
 		return;
 
-	struct devtmpfs_device *dev = &devtmpfs_devices[devtmpfs_device_count];
+	struct devtmpfs_device *d = &devtmpfs_devices[devtmpfs_device_count];
 	int i;
 
-	for (i = 0; name[i] && i < (int)sizeof(dev->name) - 1; i++)
-		dev->name[i] = name[i];
-	dev->name[i] = '\0';
+	for (i = 0; name[i] && i < (int)sizeof(d->name) - 1; i++)
+		d->name[i] = name[i];
+	d->name[i] = '\0';
 
-	dev->type = DEVTMPFS_DEVICE_VFS;
-	dev->i_type = VFS_IFILE;
-	dev->vfs_ops = ops;
-	dev->vfs_private = private_data;
+	d->type = DEVTMPFS_DEVICE_VFS;
+	d->i_type = VFS_IFILE;
+	d->dev = dev;
+	d->vfs_ops = ops;
+	d->vfs_private = private_data;
 	devtmpfs_device_count++;
 }
 
 void devtmpfs_register_inode(const char *name,
 			     const struct vfs_inode_ops *ops,
 			     void *private_data,
-			     uint16_t i_type)
+			     uint16_t i_type,
+			     dev_t dev)
 {
 	if (devtmpfs_device_count >= DEVTMPFS_MAX_DEVICES || !name)
 		return;
 
-	struct devtmpfs_device *dev = &devtmpfs_devices[devtmpfs_device_count];
+	struct devtmpfs_device *d = &devtmpfs_devices[devtmpfs_device_count];
 	int i;
 
-	for (i = 0; name[i] && i < (int)sizeof(dev->name) - 1; i++)
-		dev->name[i] = name[i];
-	dev->name[i] = '\0';
+	for (i = 0; name[i] && i < (int)sizeof(d->name) - 1; i++)
+		d->name[i] = name[i];
+	d->name[i] = '\0';
 
-	dev->type = DEVTMPFS_DEVICE_INODE;
-	dev->i_type = i_type;
-	dev->inode_ops = ops;
-	dev->private_data = private_data;
+	d->type = DEVTMPFS_DEVICE_INODE;
+	d->i_type = i_type;
+	d->dev = dev;
+	d->inode_ops = ops;
+	d->private_data = private_data;
 	devtmpfs_device_count++;
 }
 
@@ -346,6 +419,7 @@ static void populate_dir(struct vfs_inode *dev_dir)
 		inode->i_size = 0;
 		inode->i_mode = (dev->i_type == VFS_IDIR)
 				? (S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) : (S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		inode->i_rdev = dev->dev;
 
 		if (dev->type == DEVTMPFS_DEVICE_VFS) {
 			inode->ops = &devtmpfs_vfs_inode_ops;

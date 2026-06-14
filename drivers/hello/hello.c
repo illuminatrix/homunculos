@@ -27,6 +27,6 @@ static struct vfs_inode_ops hello_file_ops = {
 
 static void hello_init(void)
 {
-	devtmpfs_register_inode("hello", &hello_file_ops, 0, VFS_IFILE);
+	devtmpfs_register_inode("hello", &hello_file_ops, 0, VFS_IFCHR, MKDEV(1, 0));
 }
 VFS_DRIVER_INIT(hello_init);

@@ -227,7 +227,19 @@ static struct vfs_ops block_dev_file_ops = {
 
 static void register_block_vfs(struct block_device *bdev)
 {
-	devtmpfs_register_vfs(bdev->name, &block_dev_file_ops, bdev);
+	int disk_idx = 0, part = 0, k;
+
+	/* Parse name like "hda", "hda1", "hdb", "hdb3" */
+	if (bdev->name[0] == 'h' && bdev->name[1] == 'd') {
+		disk_idx = bdev->name[2] - 'a';
+		k = 3;
+		while (bdev->name[k] >= '0' && bdev->name[k] <= '9') {
+			part = part * 10 + (bdev->name[k] - '0');
+			k++;
+		}
+	}
+	devtmpfs_register_vfs(bdev->name, &block_dev_file_ops, bdev,
+			      MKDEV(8, disk_idx * 16 + part));
 }
 
 /* ----------------------------------------------------------------

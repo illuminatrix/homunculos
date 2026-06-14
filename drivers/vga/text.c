@@ -145,7 +145,7 @@ static void vga_text_init(void)
 	stderr_priv.cursor = &vga_cursor;
 	stderr_priv.color  = 0x04; /* red on black */
 
-	devtmpfs_register_vfs("vga", &vga_ops, &stdout_priv);
-	devtmpfs_register_vfs("vgaerr", &vga_ops, &stderr_priv);
+	devtmpfs_register_vfs("vga", &vga_ops, &stdout_priv, MKDEV(3, 0));
+	devtmpfs_register_vfs("vgaerr", &vga_ops, &stderr_priv, MKDEV(3, 1));
 }
 VFS_DRIVER_INIT(vga_text_init);

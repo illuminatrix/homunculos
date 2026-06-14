@@ -22,6 +22,8 @@ static int ext2_unlink(struct vfs_inode *parent, const char *name);
 static int ext2_rmdir(struct vfs_inode *parent, const char *name);
 static int ext2_symlink(struct vfs_inode *parent, const char *name,
 			const char *target);
+static int ext2_mknod(struct vfs_inode *parent, const char *name,
+		      uint16_t mode, dev_t dev);
 static int ext2_readlink_op(struct vfs_inode *inode, char *buf,
 			    uint32_t size);
 static int ext2_chmod(struct vfs_inode *inode, uint16_t mode);
@@ -57,6 +59,7 @@ static struct vfs_inode_ops ext2_dir_ops = {
 	.rmdir     = ext2_rmdir,
 	.unlink    = ext2_unlink,
 	.symlink   = ext2_symlink,
+	.mknod     = ext2_mknod,
 	.link      = ext2_link,
 	.readlink  = 0,
 	.chmod     = ext2_chmod,
@@ -500,6 +503,9 @@ static int ext2_inode_write(struct vfs_inode *inode, uint32_t offset,
 	uint32_t pos, block_idx, block_offset, to_copy;
 	const uint8_t *src = (const uint8_t *)buf;
 
+	if (inode->i_type == VFS_IFCHR || inode->i_type == VFS_IFBLK)
+		return -1;
+
 	data = (struct ext2_inode_data *)inode->private_data;
 	if (!data)
 		return -1;
@@ -596,6 +602,9 @@ static int ext2_inode_read(struct vfs_inode *inode, uint32_t offset,
 	uint32_t pos;
 	uint32_t block_idx, block_offset, to_copy;
 	uint8_t *dst = (uint8_t *)buf;
+
+	if (inode->i_type == VFS_IFCHR || inode->i_type == VFS_IFBLK)
+		return -1;
 
 	data = (struct ext2_inode_data *)inode->private_data;
 	if (!data)
@@ -804,6 +813,16 @@ static struct vfs_inode *ext2_lookup(struct vfs_inode *dir, const char *name)
 					   EXT2_S_IFLNK) {
 					child->i_type = VFS_ISYMLINK;
 					child->ops = &ext2_symlink_ops;
+				} else if ((raw_child.mode & EXT2_S_IFMT) ==
+					   EXT2_S_IFCHR) {
+					child->i_type = VFS_IFCHR;
+					child->ops = &ext2_file_ops;
+					child->i_rdev = raw_child.block[0];
+				} else if ((raw_child.mode & EXT2_S_IFMT) ==
+					   EXT2_S_IFBLK) {
+					child->i_type = VFS_IFBLK;
+					child->ops = &ext2_file_ops;
+					child->i_rdev = raw_child.block[0];
 				} else {
 					child->i_type = VFS_IFILE;
 					child->ops = &ext2_file_ops;
@@ -1398,6 +1417,73 @@ static int ext2_rmdir(struct vfs_inode *parent, const char *name)
 	}
 
 	return 0;
+}
+
+static int ext2_mknod(struct vfs_inode *parent, const char *name,
+		      uint16_t mode, dev_t dev)
+{
+	struct ext2_inode_data *pdata;
+	struct ext2_fs *fs;
+	uint32_t new_inode_no;
+	struct ext2_inode new_raw;
+	struct vfs_inode *new_vfs;
+	struct ext2_inode_data *child_data;
+
+	pdata = (struct ext2_inode_data *)parent->private_data;
+	if (!pdata)
+		return -1;
+	fs = pdata->fs;
+
+	new_inode_no = ext2_alloc_inode(fs);
+	if (new_inode_no == 0)
+		return -1;
+
+	memset(&new_raw, 0, sizeof(new_raw));
+	new_raw.mode = mode;
+	new_raw.uid = 0;
+	new_raw.gid = 0;
+	new_raw.links = 1;
+	new_raw.size = 0;
+	new_raw.block[0] = dev;
+
+	if (ext2_write_inode(fs, new_inode_no, &new_raw) < 0) {
+		ext2_free_inode(fs, new_inode_no);
+		return -1;
+	}
+
+	new_vfs = vfs_alloc_inode();
+	if (!new_vfs) {
+		ext2_free_inode(fs, new_inode_no);
+		return -1;
+	}
+
+	child_data = ext2_alloc_data();
+	if (!child_data) {
+		vfs_free_inode(new_vfs);
+		ext2_free_inode(fs, new_inode_no);
+		return -1;
+	}
+	child_data->inode_no = new_inode_no;
+	child_data->fs = fs;
+
+	uint16_t file_type = mode & S_IFMT;
+	if (file_type == S_IFCHR)
+		new_vfs->i_type = VFS_IFCHR;
+	else if (file_type == S_IFBLK)
+		new_vfs->i_type = VFS_IFBLK;
+	else {
+		vfs_free_inode(new_vfs);
+		ext2_free_inode(fs, new_inode_no);
+		return -1;
+	}
+	new_vfs->i_no = new_inode_no;
+	new_vfs->i_size = 0;
+	new_vfs->i_mode = mode;
+	new_vfs->i_rdev = dev;
+	new_vfs->ops = &ext2_file_ops;
+	new_vfs->private_data = child_data;
+
+	return ext2_add_entry(parent, name, new_vfs);
 }
 
 static int ext2_symlink(struct vfs_inode *parent, const char *name,

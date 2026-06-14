@@ -79,6 +79,6 @@ static struct vfs_inode_ops tty_file_ops = {
 
 static void tty_init(void)
 {
-	devtmpfs_register_inode("tty", &tty_file_ops, 0, VFS_IFILE);
+	devtmpfs_register_inode("tty", &tty_file_ops, 0, VFS_IFCHR, MKDEV(4, 0));
 }
 VFS_DRIVER_INIT(tty_init);

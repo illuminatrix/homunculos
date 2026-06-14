@@ -43,7 +43,7 @@ dietlibc's start.S expects environ from the stack, which works.
 [x] sync       -- SYS_sync (36).  sync command.
 [x] fchmod     -- SYS_fchmod (94).  cp -p, install.
 [x] link       -- SYS_link (9).  ln hard links.
-[ ] mknod      -- SYS_mknod (14).  mknod command.
+[x] mknod      -- SYS_mknod (14).  mknod command.  vfs_mknod, ext2_mknod, devtmpfs_mknod.
 [x] dup        -- SYS_dup (41).  dup() for fd duplication.
 [ ] fcntl64    -- SYS_fcntl64 (221).  F_DUPFD, F_SETFD, etc.  Used by
     dietlibc internal stdio, xopen() in sbase.

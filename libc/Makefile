@@ -58,6 +58,7 @@ unistd/fchmod.o \
 unistd/link.o \
 unistd/fcntl.o \
 unistd/times.o \
+unistd/mknod.o \
 unistd/rename.o \
 
 OBJS:=\

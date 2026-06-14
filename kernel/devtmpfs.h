@@ -2,6 +2,7 @@
 #define DEVTMPFS_H
 
 #include <stdint.h>
+#include "vfs.h"
 
 struct vfs_inode;
 struct vfs_ops;
@@ -12,13 +13,15 @@ struct vfs_inode_ops;
 /* Register a device with file-level (vfs_ops) interface, e.g. VGA, KBD, block devices */
 void devtmpfs_register_vfs(const char *name,
 			   const struct vfs_ops *ops,
-			   void *private_data);
+			   void *private_data,
+			   dev_t dev);
 
 /* Register a device with inode-level (vfs_inode_ops) interface, e.g. hello, null, tty */
 void devtmpfs_register_inode(const char *name,
 			     const struct vfs_inode_ops *ops,
 			     void *private_data,
-			     uint16_t i_type);
+			     uint16_t i_type,
+			     dev_t dev);
 
 /* Create all registered device nodes under /dev in the current VFS tree */
 void devtmpfs_create_nodes(void);

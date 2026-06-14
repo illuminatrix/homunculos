@@ -1158,6 +1158,19 @@ int sys_rename(const char *old_path, const char *new_path)
 	return vfs_rename(abs_old, abs_new);
 }
 
+/* --- mknod --- */
+int sys_mknod(const char *path, int mode, dev_t dev)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+
+	if (!current || !path)
+		return -1;
+
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	return vfs_mknod(abs_path, (uint16_t)mode, dev);
+}
+
 /* --- link --- */
 int sys_link(const char *old_path, const char *new_path)
 {
@@ -1316,6 +1329,7 @@ syscall_init(void)
 	systemcall_table[SYS_link]     = (uint32_t)sys_link;
 	systemcall_table[SYS_fcntl64] = (uint32_t)sys_fcntl64;
 	systemcall_table[SYS_rename]   = (uint32_t)sys_rename;
+	systemcall_table[SYS_mknod]    = (uint32_t)sys_mknod;
 	systemcall_table[SYS_times]    = (uint32_t)sys_times;
 	systemcall_table[SYS_kill]      = (uint32_t)sys_kill;
 	systemcall_table[SYS_signal]    = (uint32_t)sys_signal;
