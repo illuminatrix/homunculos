@@ -31,7 +31,7 @@ $(KERNEL_BIN):
 	@echo "Building kernel..."
 	@$(MAKE) -C $(KERNEL_DIR) kernel.bin 2>&1
 
-$(DISK_IMG): $(KERNEL_BIN) $(SHELL_BIN) $(INIT_ELF) $(PIPE_TEST_BIN) $(SIGNAL_TEST_BIN) $(DUP_TEST_BIN) $(FCNTL_TEST_BIN)
+$(DISK_IMG): $(KERNEL_BIN) $(SHELL_BIN) $(INIT_ELF) $(PIPE_TEST_BIN) $(SIGNAL_TEST_BIN) $(DUP_TEST_BIN) $(FCNTL_TEST_BIN) $(BIN_CMDS)
 	@echo "Building shared disk image..."
 	@$(MAKE) -C $(KERNEL_DIR) $(patsubst $(KERNEL_DIR)/%,%,$(BIN_CMDS)) 2>&1
 	@$(TESTS_DIR)/build-disk.sh
