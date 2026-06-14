@@ -184,6 +184,33 @@ vga_contains() {
 	vga_text | grep -F -q "$pattern"
 }
 
+# Poll VGA until all given patterns appear simultaneously (single VGA read per
+# poll).  Returns 0 on success, 1 if timeout expires.  Polls every 0.2s.
+# Usage: vga_wait_for [timeout_secs=10] pattern [pattern ...]
+vga_wait_for() {
+	local timeout="${1:-10}"
+	shift
+	local max_waits=$((timeout * 5))
+	local waited=0
+	while [ $waited -lt $max_waits ]; do
+		local vga
+		vga=$(vga_text)
+		local ok=1
+		for pattern in "$@"; do
+			if ! echo "$vga" | grep -F -q "$pattern"; then
+				ok=0
+				break
+			fi
+		done
+		if [ "$ok" -eq 1 ]; then
+			return 0
+		fi
+		sleep 0.2
+		waited=$((waited + 1))
+	done
+	return 1
+}
+
 send_keys() {
 	local keys="$1"
 	local delay="${2:-0.05}"

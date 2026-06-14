@@ -47,9 +47,8 @@ fi
 send_keys "hello" 0.08
 sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
-sleep 5
 
-if vga_contains "argc=1" && vga_contains "argv[0]=hello"; then
+if vga_wait_for 10 "argc=1" "argv[0]=hello"; then
 	pass "hello via waitpid(pid,0,0) reports argc=1, argv[0]=hello"
 else
 	vga_raw=$(vga_text | tail -c 200)
@@ -61,9 +60,8 @@ fi
 send_keys "hello foo bar" 0.08
 sleep 0.3
 monitor_cmd "sendkey ret" >/dev/null 2>&1
-sleep 5
 
-if vga_contains "argc=3" && vga_contains "argv[1]=foo" && vga_contains "argv[2]=bar"; then
+if vga_wait_for 10 "argc=3" "argv[1]=foo" "argv[2]=bar"; then
 	pass "hello foo bar via waitpid(pid,0,0): argc=3, argv[1]=foo, argv[2]=bar"
 else
 	vga_raw=$(vga_text | tail -c 200)
