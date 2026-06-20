@@ -31,6 +31,7 @@ static int ext2_rename(struct vfs_inode *old_parent, const char *old_name,
 		       struct vfs_inode *new_parent, const char *new_name);
 static int ext2_link(struct vfs_inode *parent, const char *name,
 		     struct vfs_inode *existing);
+static int ext2_truncate(struct vfs_inode *inode, uint32_t length);
 
 static struct vfs_inode_ops ext2_file_ops = {
 	.read      = ext2_inode_read,
@@ -46,6 +47,7 @@ static struct vfs_inode_ops ext2_file_ops = {
 	.link      = 0,
 	.readlink  = 0,
 	.chmod     = ext2_chmod,
+	.truncate  = ext2_truncate,
 };
 
 static struct vfs_inode_ops ext2_dir_ops = {
@@ -646,6 +648,61 @@ static int ext2_inode_read(struct vfs_inode *inode, uint32_t offset,
 	}
 
 	return (int)(pos - offset);
+}
+
+/* ---------------------------------------------------------------
+ * File inode truncate
+ * --------------------------------------------------------------- */
+
+static int ext2_truncate(struct vfs_inode *inode, uint32_t length)
+{
+	struct ext2_inode_data *data;
+	struct ext2_fs *fs;
+	struct ext2_inode raw;
+	uint32_t block_size;
+	uint32_t old_block_count, new_block_count;
+
+	if (inode->i_type == VFS_IFCHR || inode->i_type == VFS_IFBLK)
+		return -1;
+
+	data = (struct ext2_inode_data *)inode->private_data;
+	if (!data)
+		return -1;
+	fs = data->fs;
+
+	if (ext2_read_inode(fs, data->inode_no, &raw) < 0)
+		return -1;
+
+	block_size = fs->block_size;
+
+	/* Extending beyond current size — just update size */
+	if (length >= raw.size) {
+		raw.size = length;
+		raw.blocks = (length + block_size - 1) / block_size
+			     * (block_size / 512);
+		ext2_write_inode(fs, data->inode_no, &raw);
+		inode->i_size = length;
+		return 0;
+	}
+
+	/* Free blocks beyond the new size */
+	old_block_count = (raw.size + block_size - 1) / block_size;
+	new_block_count = length ? (length + block_size - 1) / block_size : 0;
+
+	uint32_t i;
+	for (i = new_block_count; i < old_block_count; i++) {
+		uint32_t b = ext2_inode_bmap(fs, &raw, i);
+		if (b) {
+			ext2_set_bmap(fs, &raw, i, 0);
+			ext2_free_block(fs, b);
+		}
+	}
+
+	raw.size = length;
+	raw.blocks = new_block_count * (block_size / 512);
+	ext2_write_inode(fs, data->inode_no, &raw);
+	inode->i_size = length;
+	return 0;
 }
 
 /* ---------------------------------------------------------------

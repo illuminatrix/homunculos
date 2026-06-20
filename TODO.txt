@@ -50,8 +50,8 @@ dietlibc's start.S expects environ from the stack, which works.
 [x] times      -- SYS_times (43).  time command.
 [x] sync       -- SYS_sync (36).  sync command.
 [x] fsync      -- SYS_fsync (118).  File sync.
-[ ] truncate64 -- SYS_truncate64 (193).  dd, cp truncation.
-[ ] ftruncate64 -- SYS_ftruncate64 (194).  File truncation.
+[x] truncate64 -- SYS_truncate64 (193).  dd, cp truncation.
+[x] ftruncate64 -- SYS_ftruncate64 (194).  File truncation.
 
 ===== P2: Memory mapping (needed by dietlibc malloc/stdio) =====
 

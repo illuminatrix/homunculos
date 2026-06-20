@@ -50,6 +50,8 @@ int dup(int);
 int chmod(const char *, int);
 int fchmod(int, int);
 int rename(const char *, const char *);
+int truncate64(const char *, unsigned long);
+int ftruncate64(int, unsigned long);
 
 /* Environment */
 extern char **environ;

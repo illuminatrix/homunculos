@@ -60,6 +60,8 @@ unistd/fcntl.o \
 unistd/times.o \
 unistd/mknod.o \
 unistd/rename.o \
+unistd/truncate64.o \
+unistd/ftruncate64.o \
 
 OBJS:=\
 $(FREEOBJS) \

@@ -155,10 +155,8 @@ sys_open(const char *path, int flags)
 			return -1;
 	} else {
 		if (flags & O_TRUNC) {
-			/* Truncate: free all data blocks via write of size 0 */
-			if (inode->ops && inode->ops->write)
-				inode->ops->write(inode, 0, 0, 0);
-			inode->i_size = 0;
+			if (inode->ops && inode->ops->truncate)
+				inode->ops->truncate(inode, 0);
 		}
 	}
 
@@ -1186,6 +1184,52 @@ int sys_link(const char *old_path, const char *new_path)
 	return vfs_link(abs_old, abs_new);
 }
 
+/* --- truncate --- */
+int sys_truncate64(const char *path, unsigned long length)
+{
+	struct task *current = scheduler_get_current();
+	char abs_path[512];
+	struct vfs_inode *inode;
+
+	if (!current || !path)
+		return -1;
+
+	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	inode = vfs_resolve_path(abs_path);
+	if (!inode)
+		return -1;
+
+	if (!inode->ops || !inode->ops->truncate)
+		return -1;
+
+	return inode->ops->truncate(inode, (uint32_t)length);
+}
+
+int sys_ftruncate64(int fd, unsigned long length)
+{
+	struct task *current = scheduler_get_current();
+	struct file *f;
+	struct vfs_inode *inode;
+
+	if (!current)
+		return -1;
+	if (fd < 0 || fd >= VFS_MAX_FD)
+		return -1;
+
+	f = current->fd_table[fd];
+	if (!f)
+		return -1;
+
+	inode = (struct vfs_inode *)f->private_data;
+	if (!inode)
+		return -1;
+
+	if (!inode->ops || !inode->ops->truncate)
+		return -1;
+
+	return inode->ops->truncate(inode, (uint32_t)length);
+}
+
 /* --- Time syscalls --- */
 
 /* Kernel-side timeval/timespec (matches libc <sys/time.h>) */
@@ -1328,6 +1372,8 @@ syscall_init(void)
 	systemcall_table[SYS_fchmod]   = (uint32_t)sys_fchmod;
 	systemcall_table[SYS_link]     = (uint32_t)sys_link;
 	systemcall_table[SYS_fcntl64] = (uint32_t)sys_fcntl64;
+	systemcall_table[SYS_truncate64]  = (uint32_t)sys_truncate64;
+	systemcall_table[SYS_ftruncate64] = (uint32_t)sys_ftruncate64;
 	systemcall_table[SYS_rename]   = (uint32_t)sys_rename;
 	systemcall_table[SYS_mknod]    = (uint32_t)sys_mknod;
 	systemcall_table[SYS_times]    = (uint32_t)sys_times;

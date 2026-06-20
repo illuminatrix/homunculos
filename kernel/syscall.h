@@ -47,6 +47,8 @@
 #define SYS_chmod   15
 #define SYS_fchmod  94
 #define SYS_fcntl64 221
+#define SYS_truncate64  193
+#define SYS_ftruncate64 194
 
 #define SYS_fsync 118
 

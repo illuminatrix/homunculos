@@ -132,6 +132,7 @@ struct vfs_inode_ops {
 		     struct vfs_inode *existing);
 	int (*rename)(struct vfs_inode *old_parent, const char *old_name,
 		      struct vfs_inode *new_parent, const char *new_name);
+	int (*truncate)(struct vfs_inode *inode, uint32_t length);
 };
 
 struct vfs_inode {
