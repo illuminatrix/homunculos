@@ -19,9 +19,9 @@ void setup_identity_paging(void)
 	uint32_t i, j;
 
 	for (j = 0; j < NUM_PT; j++) {
-		kernel_pdir[j] = ((uint32_t)kernel_pt[j]) | 0x7;
+		kernel_pdir[j] = ((uint32_t)kernel_pt[j]) | (MM_PRESENT | MM_RW | MM_USER);
 		for (i = 0; i < DIR_SIZE; i++)
-			kernel_pt[j][i] = ((j * DIR_SIZE + i) * FRAME) | 0x7;
+			kernel_pt[j][i] = ((j * DIR_SIZE + i) * FRAME) | (MM_PRESENT | MM_RW | MM_USER);
 	}
 
 	turn_on_paging();
