@@ -105,74 +105,66 @@ void mm_frame_free(void *addr)
 		bitmap_clear(frame);
 }
 
+static int clone_page_table(uint32_t parent_pde, uint32_t *new_pde_out)
+{
+	uint32_t *parent_pt = (uint32_t *)(parent_pde & ~0xFFF);
+	uint32_t *new_pt = (uint32_t *)mm_frame_alloc();
+	if (!new_pt)
+		return -1;
+
+	for (uint32_t j = 0; j < DIR_SIZE; j++) {
+		if (parent_pt[j] & MM_PRESENT) {
+			void *new_frame = mm_frame_alloc();
+			if (!new_frame) {
+				for (uint32_t k = 0; k < j; k++) {
+					if (new_pt[k] & MM_PRESENT)
+						mm_frame_free((void *)(new_pt[k] & ~0xFFF));
+				}
+				mm_frame_free(new_pt);
+				return -1;
+			}
+			memcpy(new_frame, (void *)(parent_pt[j] & ~0xFFF), FRAME);
+			new_pt[j] = ((uint32_t)new_frame) | (parent_pt[j] & 0xFFF);
+		} else {
+			new_pt[j] = parent_pt[j];
+		}
+	}
+
+	*new_pde_out = ((uint32_t)new_pt) | (parent_pde & 0xFFF);
+	return 0;
+}
+
+static void free_cloned_range(uint32_t *pdir, uint32_t start, uint32_t end)
+{
+	for (uint32_t i = start; i < end; i++) {
+		if (!(pdir[i] & MM_PRESENT))
+			continue;
+		uint32_t *pt = (uint32_t *)(pdir[i] & ~0xFFF);
+		for (uint32_t j = 0; j < DIR_SIZE; j++) {
+			if (pt[j] & MM_PRESENT)
+				mm_frame_free((void *)(pt[j] & ~0xFFF));
+		}
+		mm_frame_free(pt);
+	}
+}
+
 uint32_t *mm_clone_pdir(uint32_t *parent_pdir)
 {
-	uint32_t i, j;
-	uint32_t *new_pdir;
-	uint32_t *new_pt;
-	uint32_t *parent_pt;
-	void *new_frame;
-	void *parent_frame;
-
-		new_pdir = (uint32_t *)mm_frame_alloc();
+	uint32_t *new_pdir = (uint32_t *)mm_frame_alloc();
 	if (!new_pdir)
 		return 0;
 
-	/* Copy kernel identity page table entries (first 4, 0-16MB) directly.
-	 * These are shared with the parent — not cloned. Mark them in new_pdir
-	 * only after all user entries are processed, so error cleanup doesn't
-	 * try to free shared page tables. */
 	memcpy(new_pdir, parent_pdir, 4 * sizeof(uint32_t));
 
-	for (i = 4; i < DIR_SIZE; i++) {
-		if (parent_pdir[i] & 1) {
-			new_pt = (uint32_t *)mm_frame_alloc();
-			if (!new_pt) {
-				for (j = 4; j < i; j++) {
-					if (new_pdir[j] & 1) {
-						uint32_t *pt = (uint32_t *)(new_pdir[j] & ~0xFFF);
-						for (uint32_t k = 0; k < DIR_SIZE; k++) {
-							if (pt[k] & 1)
-								mm_frame_free((void *)(pt[k] & ~0xFFF));
-						}
-						mm_frame_free(pt);
-					}
-				}
+	for (uint32_t i = 4; i < DIR_SIZE; i++) {
+		if (parent_pdir[i] & MM_PRESENT) {
+			uint32_t new_pde;
+			if (clone_page_table(parent_pdir[i], &new_pde) < 0) {
+				free_cloned_range(new_pdir, 4, i);
 				mm_frame_free(new_pdir);
 				return 0;
 			}
-
-			parent_pt = (uint32_t *)(parent_pdir[i] & ~0xFFF);
-			for (j = 0; j < DIR_SIZE; j++) {
-				if (parent_pt[j] & 1) {
-					new_frame = mm_frame_alloc();
-					parent_frame = (void *)(parent_pt[j] & ~0xFFF);
-					if (!new_frame) {
-						for (uint32_t k = 0; k < j; k++) {
-							if (new_pt[k] & 1)
-								mm_frame_free((void *)(new_pt[k] & ~0xFFF));
-						}
-						mm_frame_free(new_pt);
-						for (uint32_t k = 4; k < i; k++) {
-							if (new_pdir[k] & 1) {
-								uint32_t *pt2 = (uint32_t *)(new_pdir[k] & ~0xFFF);
-								for (uint32_t l = 0; l < DIR_SIZE; l++) {
-									if (pt2[l] & 1)
-										mm_frame_free((void *)(pt2[l] & ~0xFFF));
-								}
-								mm_frame_free(pt2);
-							}
-						}
-						mm_frame_free(new_pdir);
-						return 0;
-					}
-					memcpy(new_frame, parent_frame, FRAME);
-					new_pt[j] = ((uint32_t)new_frame) | (parent_pt[j] & 0xFFF);
-				} else {
-					new_pt[j] = parent_pt[j];
-				}
-			}
-			new_pdir[i] = ((uint32_t)new_pt) | (parent_pdir[i] & 0xFFF);
+			new_pdir[i] = new_pde;
 		} else {
 			new_pdir[i] = parent_pdir[i];
 		}
