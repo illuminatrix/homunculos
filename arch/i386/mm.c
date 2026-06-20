@@ -219,3 +219,43 @@ uint32_t mm_alloc_at(uint32_t *pdir, uint32_t va, uint32_t flags)
 
 	return va;
 }
+
+void mm_invlpg(uint32_t *pdir, uint32_t va)
+{
+	uint32_t cr3;
+	asm volatile("mov %%cr3, %0" : "=r"(cr3));
+	if (cr3 == (uint32_t)pdir)
+		asm volatile("invlpg %0" :: "m"(*(uint32_t *)va));
+}
+
+int mm_unmap_at(uint32_t *pdir, uint32_t va)
+{
+	uint32_t pd_idx = va >> 22;
+	uint32_t pt_idx = (va >> 12) & 0x3FF;
+	uint32_t *pt;
+
+	if (!(pdir[pd_idx] & MM_PRESENT))
+		return -1;
+
+	pt = (uint32_t *)(pdir[pd_idx] & ~0xFFF);
+	if (!(pt[pt_idx] & MM_PRESENT))
+		return -1;
+
+	mm_frame_free((void *)(pt[pt_idx] & ~0xFFF));
+	pt[pt_idx] = 0;
+
+	mm_invlpg(pdir, va);
+	return 0;
+}
+
+uint32_t mm_get_pte(uint32_t *pdir, uint32_t va)
+{
+	uint32_t pd_idx = va >> 22;
+	uint32_t pt_idx = (va >> 12) & 0x3FF;
+
+	if (!(pdir[pd_idx] & MM_PRESENT))
+		return 0;
+
+	uint32_t *pt = (uint32_t *)(pdir[pd_idx] & ~0xFFF);
+	return pt[pt_idx];
+}

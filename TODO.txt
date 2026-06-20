@@ -53,13 +53,18 @@ dietlibc's start.S expects environ from the stack, which works.
 [x] truncate64 -- SYS_truncate64 (193).  dd, cp truncation.
 [x] ftruncate64 -- SYS_ftruncate64 (194).  File truncation.
 
+Flaky test: test-ext2-write sometimes fails on the unlink and poweroff
+subtests.  The run_cmd() helper in tests/test-ext2-write.sh uses only
+0.1s between keystrokes, which can race past the shell prompt.  Either
+increase delays or add prompt-wait loops.
+
 ===== P2: Memory mapping (needed by dietlibc malloc/stdio) =====
 
-[ ] mmap2      -- SYS_mmap2 (192).  dietlibc alloc() / mmap() wrapper
+[x] mmap2      -- SYS_mmap2 (192).  dietlibc alloc() / mmap() wrapper
     uses mmap2 for large allocations.  Also needed for MAP_ANONYMOUS
-    pages.  Stub: allocate frame + map at requested VA.
-[ ] munmap     -- SYS_munmap (91).  Free mapped pages.
-[ ] mprotect   -- SYS_mprotect (125).  Stack guard pages, RELRO.
+    pages.  Implemented: VMA tracking, gap search from 0x40000000.
+[x] munmap     -- SYS_munmap (91).  Free mapped pages.
+[x] mprotect   -- SYS_mprotect (125).  Stack guard pages, RELRO.
 
 ===== P3: uid/gid + process management =====
 

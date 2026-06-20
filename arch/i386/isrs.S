@@ -101,19 +101,23 @@ IRQ 15 # Reserved
 
 .global syscall_handler
 syscall_handler:
-	pushl %edx # param 3
-	pushl %ecx # param 2
-	pushl %ebx # param 1
+	# 6-arg convention: ebp=arg6, edi=arg5, esi=arg4, edx=arg3, ecx=arg2, ebx=arg1
+	pushl %ebp # arg 6 (offset for mmap2)
+	pushl %edi # arg 5 (fd for mmap2)
+	pushl %esi # arg 4 (flags for mmap2)
+	pushl %edx # arg 3 (prot for mmap2)
+	pushl %ecx # arg 2 (length for mmap2)
+	pushl %ebx # arg 1 (addr for mmap2)
 	call *systemcall_table(,%eax,4) # call systemcall function position %eax moving 4 bytes
 	# Check for pending signals before returning to user mode
-	# iret frame (eip/cs/eflags/uesp/ss) is at %esp + 12
-	lea 12(%esp), %ebx      # ebx = pointer to iret frame
+	# iret frame (eip/cs/eflags/uesp/ss) is at esp + 24 (6 params * 4 bytes)
+	lea 24(%esp), %ebx      # ebx = pointer to iret frame
 	pushl %eax              # save syscall return value
 	pushl %ebx              # push iret frame pointer
 	call signal_check_and_deliver
 	addl $4, %esp           # pop pointer
 	popl %eax               # restore return value (may be unused if signal delivered)
-	add $12, %esp # cleaning stack
+	add $24, %esp # cleaning stack (6 params)
 	# return is available in %eax
 	iretl
 

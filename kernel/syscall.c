@@ -344,9 +344,9 @@ sys_fork(void)
 	uint32_t eip, cs, eflags, fp;
 
 	__asm__ volatile(
-		"movl 20(%%ebp), %0\n\t"
-		"movl 24(%%ebp), %1\n\t"
-		"movl 28(%%ebp), %2\n\t"
+		"movl 32(%%ebp), %0\n\t"
+		"movl 36(%%ebp), %1\n\t"
+		"movl 40(%%ebp), %2\n\t"
 		"movl %%ebp, %3\n\t"
 		: "=r"(eip), "=r"(cs), "=r"(eflags), "=r"(fp)
 	);
@@ -537,8 +537,8 @@ sys_exec(const char *path, char **argv, char **envp)
 	signal_init_task(current);
 
 	asm volatile("movl %%ebp, %0" : "=r"(fp));
-	*(uint32_t *)(fp + 20) = entry;
-	*(uint32_t *)(fp + 32) = user_esp;
+	*(uint32_t *)(fp + 32) = entry;
+	*(uint32_t *)(fp + 44) = user_esp;
 
 	current->pdir = new_pdir;
 	task_set_pdir(current, new_pdir);
@@ -1230,6 +1230,189 @@ int sys_ftruncate64(int fd, unsigned long length)
 	return inode->ops->truncate(inode, (uint32_t)length);
 }
 
+/* --- Memory mapping (mmap2/munmap/mprotect) --- */
+
+#define MMAP_BASE      0x40000000
+#define PROT_READ      1
+#define PROT_WRITE     2
+#define MAP_ANONYMOUS  32
+#define MAP_FIXED      16
+#define MAP_PRIVATE     2
+
+static uint32_t vma_find_gap(struct task *t, uint32_t length)
+{
+	uint32_t candidate = MMAP_BASE;
+
+	while (1) {
+		int overlap = 0;
+		uint32_t end = candidate + length;
+		if (end < candidate)
+			return 0;
+		for (int i = 0; i < t->vma_count; i++) {
+			if (candidate < t->vmas[i].end
+			    && end > t->vmas[i].start) {
+				candidate = t->vmas[i].end;
+				overlap = 1;
+				break;
+			}
+		}
+		if (!overlap)
+			return candidate;
+		if (candidate + length < candidate)
+			return 0;
+	}
+}
+
+static int vma_add(struct task *t, uint32_t start, uint32_t end,
+		   uint32_t prot, uint32_t flags)
+{
+	if (t->vma_count >= MAX_VMA)
+		return -1;
+	t->vmas[t->vma_count].start = start;
+	t->vmas[t->vma_count].end = end;
+	t->vmas[t->vma_count].prot = prot;
+	t->vmas[t->vma_count].flags = flags;
+	t->vma_count++;
+	return 0;
+}
+
+static void vma_remove(struct task *t, uint32_t start, uint32_t end)
+{
+	for (int i = t->vma_count - 1; i >= 0; i--) {
+		struct vm_area *v = &t->vmas[i];
+		if (start >= v->end || end <= v->start)
+			continue;
+		v->start = 0;
+		v->end = 0;
+		v->prot = 0;
+		v->flags = 0;
+		t->vmas[i] = t->vmas[t->vma_count - 1];
+		t->vma_count--;
+	}
+}
+
+static void vma_update_prot(struct task *t, uint32_t start,
+			    uint32_t end, uint32_t prot)
+{
+	for (int i = 0; i < t->vma_count; i++) {
+		if (start < t->vmas[i].end
+		    && end > t->vmas[i].start)
+			t->vmas[i].prot = prot;
+	}
+}
+
+static uint32_t prot_to_page_flags(int prot)
+{
+	if (prot == 0)
+		return 0;
+	uint32_t f = MM_PRESENT | MM_USER;
+	if (prot & PROT_WRITE)
+		f |= MM_RW;
+	return f;
+}
+
+int sys_mmap2(uint32_t addr, uint32_t length, int prot,
+	      int flags, int fd, uint32_t offset)
+{
+	struct task *current = scheduler_get_current();
+	uint32_t va;
+	uint32_t page_flags;
+	int i, pages;
+
+	(void)offset;
+
+	if (!current)
+		return -1;
+
+	length = (length + 0xFFF) & ~0xFFF;
+	if (length == 0)
+		return -1;
+
+	pages = length / FRAME;
+
+	page_flags = prot_to_page_flags(prot);
+
+	/* Only anonymous mappings supported for now */
+	if (!(flags & MAP_ANONYMOUS))
+		return -1;
+
+	if (flags & MAP_FIXED) {
+		va = addr & ~0xFFF;
+		for (i = 0; i < current->vma_count; i++) {
+			if (va < current->vmas[i].end
+			    && va + length > current->vmas[i].start)
+				return -1;
+		}
+	} else {
+		va = vma_find_gap(current, length);
+		if (va == 0)
+			return -1;
+	}
+
+	for (i = 0; i < pages; i++) {
+		if (!mm_alloc_at(current->pdir, va + i * FRAME,
+				 page_flags))
+			goto fail;
+	}
+
+	if (vma_add(current, va, va + length, prot, flags) < 0)
+		goto fail;
+
+	return (int)va;
+
+fail:
+	for (int j = 0; j < i; j++)
+		mm_unmap_at(current->pdir, va + j * FRAME);
+	return -1;
+}
+
+int sys_munmap(uint32_t addr, uint32_t length)
+{
+	struct task *current = scheduler_get_current();
+	uint32_t va = addr & ~0xFFF;
+	uint32_t end = ((addr + length + 0xFFF) & ~0xFFF);
+	uint32_t page;
+
+	if (!current)
+		return -1;
+
+	for (page = va; page < end; page += FRAME) {
+		if (mm_get_pte(current->pdir, page) & MM_PRESENT)
+			mm_unmap_at(current->pdir, page);
+	}
+
+	vma_remove(current, va, end);
+	return 0;
+}
+
+int sys_mprotect(uint32_t addr, uint32_t length, int prot)
+{
+	struct task *current = scheduler_get_current();
+	uint32_t va = addr & ~0xFFF;
+	uint32_t end = ((addr + length + 0xFFF) & ~0xFFF);
+	uint32_t page_flags = prot_to_page_flags(prot);
+	uint32_t page;
+
+	if (!current)
+		return -1;
+
+	for (page = va; page < end; page += FRAME) {
+		uint32_t pte = mm_get_pte(current->pdir, page);
+		if (pte & MM_PRESENT) {
+			uint32_t pa = pte & ~0xFFF;
+			uint32_t pd_idx = page >> 22;
+			uint32_t pt_idx = (page >> 12) & 0x3FF;
+			uint32_t *pt;
+			pt = (uint32_t *)(current->pdir[pd_idx] & ~0xFFF);
+			pt[pt_idx] = pa | page_flags;
+			mm_invlpg(current->pdir, page);
+		}
+	}
+
+	vma_update_prot(current, va, end, prot);
+	return 0;
+}
+
 /* --- Time syscalls --- */
 
 /* Kernel-side timeval/timespec (matches libc <sys/time.h>) */
@@ -1376,6 +1559,9 @@ syscall_init(void)
 	systemcall_table[SYS_ftruncate64] = (uint32_t)sys_ftruncate64;
 	systemcall_table[SYS_rename]   = (uint32_t)sys_rename;
 	systemcall_table[SYS_mknod]    = (uint32_t)sys_mknod;
+	systemcall_table[SYS_mmap2]   = (uint32_t)sys_mmap2;
+	systemcall_table[SYS_munmap]  = (uint32_t)sys_munmap;
+	systemcall_table[SYS_mprotect]= (uint32_t)sys_mprotect;
 	systemcall_table[SYS_times]    = (uint32_t)sys_times;
 	systemcall_table[SYS_kill]      = (uint32_t)sys_kill;
 	systemcall_table[SYS_signal]    = (uint32_t)sys_signal;

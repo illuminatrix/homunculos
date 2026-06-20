@@ -31,6 +31,15 @@ int mm_map_at(uint32_t *pdir, uint32_t va, uint32_t pa, uint32_t flags);
 /* Allocate a frame and map it at virtual address in given page directory */
 uint32_t mm_alloc_at(uint32_t *pdir, uint32_t va, uint32_t flags);
 
+/* Unmap a single page at virtual address (frees the frame) */
+int mm_unmap_at(uint32_t *pdir, uint32_t va);
+
+/* Read the PTE for a virtual address (returns 0 if not mapped) */
+uint32_t mm_get_pte(uint32_t *pdir, uint32_t va);
+
+/* Invalidate TLB entry for a virtual address (if in current pdir) */
+void mm_invlpg(uint32_t *pdir, uint32_t va);
+
 extern uint32_t kernel_pdir[DIR_SIZE];
 extern uint32_t kernel_pt[][DIR_SIZE];
 

@@ -123,6 +123,7 @@ make -C tests test-times
 make -C tests test-chmod
 make -C tests test-mv
 make -C tests test-dup
+make -C tests test-mmap2
 ```
 
 Clean

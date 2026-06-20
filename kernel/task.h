@@ -8,6 +8,14 @@
 #define TASK_STACK_SIZE 4096
 #define TASK_NAME_LEN 32
 #define TASK_NSIG 32
+#define MAX_VMA 16
+
+struct vm_area {
+	uint32_t start;
+	uint32_t end;
+	uint32_t prot;
+	uint32_t flags;
+};
 
 enum task_state {
 	TASK_STATE_READY,
@@ -35,6 +43,10 @@ struct task {
 	uint32_t program_break;
 	char cwd[256];
 	uint32_t wakeup_tick;
+
+	/* VMA tracking */
+	struct vm_area vmas[MAX_VMA];
+	int vma_count;
 
 	/* Signal state */
 	uint32_t pending_signals;

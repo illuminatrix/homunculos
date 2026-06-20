@@ -50,6 +50,11 @@
 #define SYS_truncate64  193
 #define SYS_ftruncate64 194
 
+/* Memory mapping */
+#define SYS_mmap2    192
+#define SYS_munmap   91
+#define SYS_mprotect 125
+
 #define SYS_fsync 118
 
 /* Signal syscalls */

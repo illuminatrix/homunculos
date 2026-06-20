@@ -28,6 +28,7 @@ struct task *task_alloc(void)
 	t->is_user = 0;
 	t->brk_start = 0;
 	t->program_break = 0;
+	t->vma_count = 0;
 	t->cwd[0] = '/';
 	t->cwd[1] = '\0';
 	signal_init_task(t);
@@ -69,6 +70,9 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	child->is_user = parent->is_user;
 	child->brk_start = parent->brk_start;
 	child->program_break = parent->program_break;
+	child->vma_count = parent->vma_count;
+	memcpy(child->vmas, parent->vmas,
+	       parent->vma_count * sizeof(struct vm_area));
 	strncpy(child->cwd, parent->cwd, sizeof(child->cwd) - 1);
 	child->cwd[sizeof(child->cwd) - 1] = '\0';
 
@@ -78,13 +82,18 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	 * Parent's stack layout at parent_fp (sys_fork's frame pointer):
 	 *   parent_fp       = saved ebp (task_main's frame pointer)
 	 *   parent_fp + 4   = return addr (to syscall_handler)
-	 *   parent_fp + 8   = saved ebx (syscall_handler)
-	 *   parent_fp + 12  = saved ecx
-	 *   parent_fp + 16  = saved edx
-	 *   parent_fp + 20  = eip (from int $0x80)
-	 *   parent_fp + 24  = cs
-	 *   parent_fp + 28  = eflags
-	 *   parent_fp + 32  = data below int $0x80 frame (task_main's locals, frames...)
+	 *   parent_fp + 8   = saved ebx (arg1, syscall_handler)
+	 *   parent_fp + 12  = saved ecx (arg2)
+	 *   parent_fp + 16  = saved edx (arg3)
+	 *   parent_fp + 20  = saved esi (arg4)
+	 *   parent_fp + 24  = saved edi (arg5)
+	 *   parent_fp + 28  = saved ebp (arg6)
+	 *   parent_fp + 32  = eip (from int $0x80)
+	 *   parent_fp + 36  = cs
+	 *   parent_fp + 40  = eflags
+	 *   parent_fp + 44  = user esp (user mode only)
+	 *   parent_fp + 48  = user ss (user mode only)
+	 *   parent_fp + 52  = data below int $0x80 frame (task_main's locals, frames...)
 	 *
 	 * task_main's ebp was saved by sys_fork's prologue at parent_fp+0.
 	 * We need to adjust it so the child's ebp points into its own stack.
@@ -112,16 +121,16 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	uint32_t below_size;
 	int user_fork = (cs == GDT_USER_CODE);
 	if (user_fork) {
-		below_size = stack_bottom - (parent_fp + 40);
+		below_size = stack_bottom - (parent_fp + 52);
 	} else {
-		below_size = stack_bottom - (parent_fp + 32);
+		below_size = stack_bottom - (parent_fp + 40);
 	}
 	uint32_t dest = child_end - below_size;
 
-	memcpy((void *)dest, (void *)(parent_fp + (user_fork ? 40 : 32)), below_size);
+	memcpy((void *)dest, (void *)(parent_fp + (user_fork ? 52 : 40)), below_size);
 
 	if (user_fork) {
-		uint32_t user_esp = *(uint32_t *)(parent_fp + 32);
+		uint32_t user_esp = *(uint32_t *)(parent_fp + 44);
 		uint32_t user_stack_top = (uint32_t)(parent->stack
 					+ TASK_STACK_SIZE / 2);
 
@@ -148,7 +157,7 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 
 	if (user_fork) {
 		*(--sp) = GDT_USER_DATA;                     /* ss */
-		*(--sp) = *(uint32_t *)(parent_fp + 32);     /* user esp */
+		*(--sp) = *(uint32_t *)(parent_fp + 44);     /* user esp */
 	}
 	*(--sp) = eflags;
 	*(--sp) = cs;
