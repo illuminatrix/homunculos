@@ -13,7 +13,7 @@ echo "  Subtest 7: 'poweroff' shuts down QEMU (regression)"
 
 errors=0
 
-# Helper: type a command and press Enter
+# Helper: type a command and press Enter, then wait briefly for execution
 run_cmd() {
 	local cmd="$1"
 	send_keys "$cmd" 0.05
@@ -48,8 +48,7 @@ fi
 run_cmd "touch /ext2wrtest.txt"
 run_cmd 'write /ext2wrtest.txt Hello from write!'
 run_cmd "cat /ext2wrtest.txt"
-sleep 4
-if vga_contains "Hello from write!"; then
+if vga_wait_for 10 "Hello from write!"; then
 	pass "cat shows 'Hello from write!' after touch+write"
 else
 	fail "cat did not show expected content"
@@ -61,8 +60,7 @@ run_cmd "mkdir /ext2wrdir"
 run_cmd "touch /ext2wrdir/nested.txt"
 run_cmd 'write /ext2wrdir/nested.txt nested'
 run_cmd "cat /ext2wrdir/nested.txt"
-sleep 4
-if vga_contains "nested"; then
+if vga_wait_for 10 "nested"; then
 	pass "mkdir+touch+write+cat shows 'nested'"
 else
 	fail "nested file content not shown"
@@ -72,8 +70,7 @@ fi
 # --- Subtest 5: symlink + readlink ---
 run_cmd "ln -s /ext2wrtest.txt /ext2wrtlink"
 run_cmd "readlink /ext2wrtlink"
-sleep 4
-if vga_contains "/ext2wrtest.txt"; then
+if vga_wait_for 10 "/ext2wrtest.txt"; then
 	pass "readlink shows correct symlink target"
 else
 	fail "readlink did not show expected target"
@@ -83,8 +80,7 @@ fi
 # --- Subtest 6: unlink ---
 run_cmd "rm /ext2wrtest.txt"
 run_cmd "cat /ext2wrtest.txt"
-sleep 4
-if vga_contains "open failed"; then
+if vga_wait_for 10 "open failed"; then
 	pass "cat fails after unlink (file gone)"
 else
 	fail "cat should have failed after unlink"

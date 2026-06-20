@@ -53,11 +53,6 @@ dietlibc's start.S expects environ from the stack, which works.
 [x] truncate64 -- SYS_truncate64 (193).  dd, cp truncation.
 [x] ftruncate64 -- SYS_ftruncate64 (194).  File truncation.
 
-Flaky test: test-ext2-write sometimes fails on the unlink and poweroff
-subtests.  The run_cmd() helper in tests/test-ext2-write.sh uses only
-0.1s between keystrokes, which can race past the shell prompt.  Either
-increase delays or add prompt-wait loops.
-
 ===== P2: Memory mapping (needed by dietlibc malloc/stdio) =====
 
 [x] mmap2      -- SYS_mmap2 (192).  dietlibc alloc() / mmap() wrapper

@@ -159,21 +159,24 @@ int sys_rt_sigreturn(void)
 	 * Modify the iretl frame on the kernel stack so the syscall
 	 * return goes to the saved context instead of the trampoline.
 	 *
-	 * Stack layout in sys_rt_sigreturn after C prologue:
+	 * Stack layout in sys_rt_sigreturn after C prologue (6-arg dispatch):
 	 *   [ebp]      = old ebp
 	 *   [ebp+4]    = return addr (to syscall_handler after call)
-	 *   [ebp+8]    = ebx (pushed by syscall_handler)
-	 *   [ebp+12]   = ecx
-	 *   [ebp+16]   = edx
-	 *   [ebp+20]   = eip (from int $0x80)
-	 *   [ebp+24]   = cs
-	 *   [ebp+28]   = eflags
-	 *   [ebp+32]   = user_esp
-	 *   [ebp+36]   = ss
+	 *   [ebp+8]    = ebx (arg1)
+	 *   [ebp+12]   = ecx (arg2)
+	 *   [ebp+16]   = edx (arg3)
+	 *   [ebp+20]   = esi (arg4)
+	 *   [ebp+24]   = edi (arg5)
+	 *   [ebp+28]   = ebp (arg6)
+	 *   [ebp+32]   = eip (from int $0x80)
+	 *   [ebp+36]   = cs
+	 *   [ebp+40]   = eflags
+	 *   [ebp+44]   = user_esp
+	 *   [ebp+48]   = ss
 	 */
 	__asm__ volatile("mov %%ebp, %0" : "=r"(ebp));
 
-	uint32_t *iret = (uint32_t *)(ebp + 20);
+	uint32_t *iret = (uint32_t *)(ebp + 32);
 	iret[0] = frame.saved_eip;
 	iret[1] = frame.saved_cs;
 	iret[2] = frame.saved_eflags;
