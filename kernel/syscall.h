@@ -62,6 +62,8 @@
 #define SYS_getgid32  200
 #define SYS_geteuid32 201
 #define SYS_getegid32 202
+#define SYS_setuid32  213
+#define SYS_setgid32  214
 
 /* Signal syscalls */
 #define SYS_kill      37

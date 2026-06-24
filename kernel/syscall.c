@@ -668,6 +668,20 @@ sys_getegid32(void)
 	return 0;
 }
 
+int
+sys_setuid32(uint32_t uid)
+{
+	(void)uid;
+	return 0;
+}
+
+int
+sys_setgid32(uint32_t gid)
+{
+	(void)gid;
+	return 0;
+}
+
 #define UTSNAME_LEN 65
 
 struct sys_utsname {
@@ -1596,4 +1610,6 @@ syscall_init(void)
 	systemcall_table[SYS_getgid32]  = (uint32_t)sys_getgid32;
 	systemcall_table[SYS_geteuid32] = (uint32_t)sys_geteuid32;
 	systemcall_table[SYS_getegid32] = (uint32_t)sys_getegid32;
+	systemcall_table[SYS_setuid32]  = (uint32_t)sys_setuid32;
+	systemcall_table[SYS_setgid32]  = (uint32_t)sys_setgid32;
 }
