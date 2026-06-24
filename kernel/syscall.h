@@ -57,6 +57,12 @@
 
 #define SYS_fsync 118
 
+/* uid/gid stubs */
+#define SYS_getuid32  199
+#define SYS_getgid32  200
+#define SYS_geteuid32 201
+#define SYS_getegid32 202
+
 /* Signal syscalls */
 #define SYS_kill      37
 #define SYS_signal    48

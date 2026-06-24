@@ -62,10 +62,10 @@ dietlibc's start.S expects environ from the stack, which works.
 
 ===== P3: uid/gid + process management =====
 
-[ ] getuid32   -- SYS_getuid32 (199).  Stub: return 0.
-[ ] getgid32   -- SYS_getgid32 (200).  Stub: return 0.
-[ ] geteuid32  -- SYS_geteuid32 (201).  Stub: return 0.
-[ ] getegid32  -- SYS_getegid32 (202).  Stub: return 0.
+[x] getuid32   -- SYS_getuid32 (199).  Stub: return 0.
+[x] getgid32   -- SYS_getgid32 (200).  Stub: return 0.
+[x] geteuid32  -- SYS_geteuid32 (201).  Stub: return 0.
+[x] getegid32  -- SYS_getegid32 (202).  Stub: return 0.
 [ ] setuid32   -- SYS_setuid32 (213).  Stub: return 0.
 [ ] setgid32   -- SYS_setgid32 (214).  Stub: return 0.
 [ ] setsid     -- SYS_setsid (66).  setsid command, daemonize.

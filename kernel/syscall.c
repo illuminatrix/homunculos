@@ -644,6 +644,30 @@ sys_getppid(void)
 	return current->parent_pid;
 }
 
+int
+sys_getuid32(void)
+{
+	return 0;
+}
+
+int
+sys_getgid32(void)
+{
+	return 0;
+}
+
+int
+sys_geteuid32(void)
+{
+	return 0;
+}
+
+int
+sys_getegid32(void)
+{
+	return 0;
+}
+
 #define UTSNAME_LEN 65
 
 struct sys_utsname {
@@ -1568,4 +1592,8 @@ syscall_init(void)
 	systemcall_table[SYS_rt_sigaction]  = (uint32_t)sys_rt_sigaction;
 	systemcall_table[SYS_rt_sigreturn]  = (uint32_t)sys_rt_sigreturn;
 	systemcall_table[SYS_rt_sigprocmask] = (uint32_t)sys_rt_sigprocmask;
+	systemcall_table[SYS_getuid32]  = (uint32_t)sys_getuid32;
+	systemcall_table[SYS_getgid32]  = (uint32_t)sys_getgid32;
+	systemcall_table[SYS_geteuid32] = (uint32_t)sys_geteuid32;
+	systemcall_table[SYS_getegid32] = (uint32_t)sys_getegid32;
 }
