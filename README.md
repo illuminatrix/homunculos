@@ -5,6 +5,8 @@ A minimal i386 (32-bit) kernel with ext2 filesystem, devtmpfs, ATA PIO, PS/2
 keyboard, VGA text-mode display, multitasking, ELF execution, and an
 interactive shell — all running on bare metal in QEMU.
 
+> **Note:** Only root (UID 0) is supported. No user management (`getuid`/`geteuid`/etc. always return 0, `setuid`/`setgid` are no-ops).
+
 Building
 --------
 
