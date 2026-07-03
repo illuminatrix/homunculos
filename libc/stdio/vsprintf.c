@@ -49,26 +49,62 @@ vsprintf(char* str, const char* restrict format, va_list args)
             format++;
             char chr[] = "0123456789";
             int number = va_arg(args, int);
-            int decr, tmp_num;
+            char buf[12];
+            int pos = 12;
 
-            if ( number < 0 ) {
-                str[written++] = 0x2D;
-                number*=-1;
+            if (number < 0) {
+                str[written++] = '-';
+                number = -number;
             }
 
-            tmp_num = number;
+            buf[--pos] = chr[number % 10];
+            while ((number /= 10) > 0)
+                buf[--pos] = chr[number % 10];
 
-            for (decr = 1; tmp_num != 0; decr = decr * 10) {
-                tmp_num = tmp_num / 10;
-            }
+            memcpy(&str[written], &buf[pos], 12 - pos);
+            written += 12 - pos;
+        }
+        else if ( *format == 'o' ) {
+            format++;
+            char chr[] = "01234567";
+            unsigned int number = va_arg(args, unsigned int);
+            char buf[12];
+            int pos = 12;
 
-            for (decr = decr / 10; decr != 0; decr = decr / 10) {
-                str[written++] = chr[((number / decr) % 10)];
-            }
+            buf[--pos] = chr[number & 7];
+            while ((number >>= 3) > 0)
+                buf[--pos] = chr[number & 7];
 
-            if (number == 0) {
-                str[written++] = '0';
-            }
+            memcpy(&str[written], &buf[pos], 12 - pos);
+            written += 12 - pos;
+        }
+        else if ( *format == 'u' ) {
+            format++;
+            char chr[] = "0123456789";
+            unsigned int number = va_arg(args, unsigned int);
+            char buf[12];
+            int pos = 12;
+
+            buf[--pos] = chr[number % 10];
+            while ((number /= 10) > 0)
+                buf[--pos] = chr[number % 10];
+
+            memcpy(&str[written], &buf[pos], 12 - pos);
+            written += 12 - pos;
+        }
+        else if ( *format == 'x' ) {
+            format++;
+            char chr[] = "0123456789abcdef";
+            unsigned int number = va_arg(args, unsigned int);
+            char buf[9];
+            int pos = 9;
+
+            buf[--pos] = chr[number & 15];
+            while ((number >>= 4) > 0)
+                buf[--pos] = chr[number & 15];
+
+            memcpy(&str[written], &buf[pos], 9 - pos);
+            written += 9 - pos;
         }
         else {
             goto incomprehensible_conversion;

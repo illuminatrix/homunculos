@@ -265,7 +265,7 @@ tests/               -- QEMU integration tests
 - **`make kernel.bin` not `make`**: Default target is `hello.elf` (legacy). Use `make kernel.bin` to build the kernel.
 - **mm_map_at invlpg**: If mapping in the current page directory (`cr3 == pdir`), `mm_map_at` must `invlpg` the VA or the old mapping may be cached in the TLB.
 - **ATA polling in QEMU TCG**: Tight polling loops on PIO status registers may hang because QEMU TCG virtual time doesn't advance for the device model. Always include `io_delay()` (volatile delay loop) between polling iterations.
-- **vsprintf only handles %c, %s, %d**: No support for hex, unsigned, width, or precision.
+- **vsprintf only handles %c, %s, %d, %o, %u, %x**: No support for width, precision, or uppercase hex.
 - **No heap allocator**: Only `mm_frame_alloc()` (4KB pages). No malloc/kmalloc/brk.
 - **setenv/putenv must compact env_ptrs on removal**: Replacing a value that won't fit in-place requires deleting the old entry. Simply setting `env_ptrs[i]=0` leaves a NULL hole, and `sys_exec` iterates the env array until the first NULL — it will see an empty env. Always shift remaining entries down and decrement `env_count`.
 - **memcmp broken in inline asm**: `libc/string/memcmp.c` had a bug where label `2:` (set result to 0 for "equal") always executed AFTER label `1:` (negate result for "less than"), causing memcmp to ALWAYS return 0 regardless of input. Fixed by using a simple C loop. If you add inline asm with multiple labels, make sure label paths are exclusive (use `jmp` after `1:` to skip `2:` when `a > b`).
