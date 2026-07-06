@@ -31,6 +31,7 @@ struct task *task_alloc(void)
 	t->vma_count = 0;
 	t->cwd[0] = '/';
 	t->cwd[1] = '\0';
+	t->umask = 022;
 	signal_init_task(t);
 	next_pid++;
 
@@ -75,6 +76,7 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	       parent->vma_count * sizeof(struct vm_area));
 	strncpy(child->cwd, parent->cwd, sizeof(child->cwd) - 1);
 	child->cwd[sizeof(child->cwd) - 1] = '\0';
+	child->umask = parent->umask;
 
 	/*
 	 * Copy parent's stack data below the int $0x80 frame to child.

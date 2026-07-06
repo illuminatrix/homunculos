@@ -48,7 +48,7 @@ if [ -f "$FCNTL_TEST" ]; then
 fi
 
 # Command binaries
-for cmd in poweroff reboot greeting uname ls cat stat hello pwd cd echo touch write mkdir rm ln readlink sleep systime env kill trap sync times chmod mv fchmod mknod; do
+for cmd in poweroff reboot greeting uname ls cat stat hello pwd cd echo touch write mkdir rm ln readlink sleep systime env kill trap sync times chmod mv fchmod mknod umask; do
 	src="${TESTS_DIR}/../shell/bin/$cmd"
 	if [ -f "$src" ]; then
 		debugfs -w .part.img -R "write $src /bin/$cmd" 2>/dev/null

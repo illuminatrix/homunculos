@@ -48,6 +48,8 @@ struct task {
 	struct vm_area vmas[MAX_VMA];
 	int vma_count;
 
+	uint16_t umask;
+
 	/* Signal state */
 	uint32_t pending_signals;
 	uint32_t signal_mask;

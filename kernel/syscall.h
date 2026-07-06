@@ -11,6 +11,7 @@
 #define SYS_waitpid	    7
 #define SYS_link	     9
 #define SYS_execve     11
+#define SYS_umask     60
 #define SYS_mknod     14
 #define SYS_chdir     12
 #define SYS_lseek     19

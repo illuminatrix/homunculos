@@ -262,6 +262,7 @@ tests/               -- QEMU integration tests
 - **ext2_lookup sets child->i_no to the on-disk inode number**: This is required for mount resolution to work. Without this, the VFS-level `i_no` would be a sequential pool counter, making cross-lookup identification impossible.
 - **`-fno-stack-protector` in root CFLAGS**: Stack buffers in kernel code (e.g. shell buf[64]) trigger __stack_chk_fail without this flag.
 - **`-mno-sse` in root CFLAGS**: GCC at `-O0` may generate SSE instructions (`movdqu`/`movaps`) for struct copies, causing #UD since CR4.OSFXSR is not set. Must use `-mno-sse`.
+- **Stale .o files after struct changes**: No automatic header dependency tracking. After modifying `struct task` in `kernel/task.h`, you MUST `rm -f kernel/*.o` and rebuild — every .c that includes `task.h` (scheduler, signal, syscall, etc.) has stale struct offsets. Forgetting this caused `signal_init_task` to write `pending_signals=0` at offset `0x2a4`, which overlapped the new `umask` field.
 - **`make kernel.bin` not `make`**: Default target is `hello.elf` (legacy). Use `make kernel.bin` to build the kernel.
 - **mm_map_at invlpg**: If mapping in the current page directory (`cr3 == pdir`), `mm_map_at` must `invlpg` the VA or the old mapping may be cached in the TLB.
 - **ATA polling in QEMU TCG**: Tight polling loops on PIO status registers may hang because QEMU TCG virtual time doesn't advance for the device model. Always include `io_delay()` (volatile delay loop) between polling iterations.

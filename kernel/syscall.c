@@ -1547,6 +1547,17 @@ sys_nanosleep(struct k_timespec *req, struct k_timespec *rem)
 	return 0;
 }
 
+int
+sys_umask(int mask)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return 022;
+	int old = current->umask;
+	current->umask = (uint16_t)(mask & 0777);
+	return old;
+}
+
 void
 syscall_init(void)
 {
@@ -1606,6 +1617,7 @@ syscall_init(void)
 	systemcall_table[SYS_rt_sigaction]  = (uint32_t)sys_rt_sigaction;
 	systemcall_table[SYS_rt_sigreturn]  = (uint32_t)sys_rt_sigreturn;
 	systemcall_table[SYS_rt_sigprocmask] = (uint32_t)sys_rt_sigprocmask;
+	systemcall_table[SYS_umask]    = (uint32_t)sys_umask;
 	systemcall_table[SYS_getuid32]  = (uint32_t)sys_getuid32;
 	systemcall_table[SYS_getgid32]  = (uint32_t)sys_getgid32;
 	systemcall_table[SYS_geteuid32] = (uint32_t)sys_geteuid32;
