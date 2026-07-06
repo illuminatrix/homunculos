@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	int dst = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC);
+	int dst = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (dst < 0) {
 		printf("cp: %s: open error\n", argv[2]);
 		close(src);

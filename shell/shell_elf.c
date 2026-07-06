@@ -135,7 +135,7 @@ static void shell_execute(char *buf)
 
 		if (pid == 0) {
 			if (redirect_out) {
-				int fd = open(redirect_out, O_WRONLY | O_CREAT | O_TRUNC);
+				int fd = open(redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 				if (fd < 0) {
 					printf("redirection failed: %s\n", redirect_out);
 					exit(1);

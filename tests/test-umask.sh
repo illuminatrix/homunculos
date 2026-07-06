@@ -75,6 +75,31 @@ sleep 0.2
 monitor_cmd "sendkey ret" >/dev/null 2>&1
 sleep 1
 
+# --- Open/create with umask: run 'umask 027 touch /x' as a single command ---
+send_keys "umask 027 touch /x" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+send_keys "stat /x" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+if vga_contains "33184"; then
+	pass "umask 027 → touch → mode 0100640 (decimal 33184)"
+else
+	vga_raw=$(vga_text | tail -c 200)
+	fail "Expected mode 33184 (0100640). VGA tail: [$vga_raw]"
+	errors=$((errors + 1))
+fi
+
+# --- Restore default umask ---
+send_keys "umask 022" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 1
+
 # --- Poweroff ---
 send_keys "poweroff" 0.08
 sleep 0.3

@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
 	int dst = -1;
 	if (ofile) {
-		dst = open(ofile, O_WRONLY | O_CREAT | O_TRUNC);
+		dst = open(ofile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (dst < 0) {
 			printf("dd: %s: open error\n", ofile);
 			if (src >= 0) close(src);

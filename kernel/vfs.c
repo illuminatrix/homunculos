@@ -561,7 +561,7 @@ void vfs_split_path(const char *path, char *dir_out, int dir_size,
 	}
 }
 
-struct vfs_inode *vfs_create_file(const char *path)
+struct vfs_inode *vfs_create_file(const char *path, uint16_t mode)
 {
 	char dir_path[256];
 	char name[64];
@@ -583,6 +583,7 @@ struct vfs_inode *vfs_create_file(const char *path)
 	if (!inode)
 		return 0;
 	inode->i_type = VFS_IFILE;
+	inode->i_mode = S_IFREG | (mode & S_IPERM);
 
 	/* Filesystem fills in private_data via add_entry */
 	if (parent->ops->add_entry(parent, name, inode) < 0) {

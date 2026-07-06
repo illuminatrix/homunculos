@@ -16,7 +16,7 @@
 
 ---
 
-## [ ] Step 1: `umask` syscall — field + handler + libc + command + test
+## [x] Step 1: `umask` syscall — field + handler + libc + command + test
 
 **No behavioral change to file creation.** Pure add of the umask concept.
 
@@ -39,9 +39,13 @@
 
 ---
 
-## [ ] Step 2: `open()` mode propagation — kernel VFS + ext2 + libc + shell callers
+## [x] Step 2: `open()` mode propagation — kernel VFS + ext2 + libc + shell callers
 
 **Files created via O_CREAT now respect umask.**
+
+**Architectural note**: `umask` MUST be a built-in shell command (like `cd`) because it
+modifies the shell process's own umask. A `fork+exec` binary cannot affect the parent.
+Added built-in handler to `shell_elf.c` alongside the `/bin/umask` binary.
 
 | File | Change |
 |------|--------|
@@ -55,10 +59,10 @@
 | `shell/bin/cp.c` | Same |
 | `shell/bin/touch.c` | Same |
 | `shell/bin/write.c` | Same |
-| `shell/shell_elf.c` | Same |
-| `tests/test-umask.sh` | **Extend** — add open/create test: set umask 027, `touch /tmp/foo`, `stat /tmp/foo`, verify mode `100600` (S_IFREG\|0600) |
+| `shell/shell_elf.c` | Add `0644` mode to open with O_CREAT; add built-in `umask` handler |
+| `tests/test-umask.sh` | **Extend** — add open/create test: set umask 027, `touch /x`, `stat /x`, verify mode `33184` (0100640 octal) |
 
-**Test**: With umask 027, `touch /tmp/x; stat /tmp/x` shows `0100600` (0644 & ~027 = 0640 → wait, 0644 & ~027 = 0640 = 0600 + S_IFREG). Actually: umask 027 = ---w-rwx, so 0666 & ~027 = 0640. File mode should be `0100640` = `S_IFREG | 0640`.
+**Test**: With umask 027, `touch /x; stat /x` shows `mode=33184` (== 0100640 = S_IFREG \| 0640).
 
 ---
 

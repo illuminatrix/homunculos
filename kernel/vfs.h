@@ -162,7 +162,7 @@ struct file *vfs_alloc_file(void);
 struct file *vfs_open_file(struct vfs_inode *inode);
 struct file *vfs_open_file_flags(struct vfs_inode *inode, int flags);
 void vfs_close_file(struct file *f);
-struct vfs_inode *vfs_create_file(const char *path);
+struct vfs_inode *vfs_create_file(const char *path, uint16_t mode);
 int vfs_mkdir(const char *path);
 int vfs_rmdir(const char *path);
 int vfs_unlink(const char *path);

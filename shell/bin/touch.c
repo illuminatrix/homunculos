@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	int fd = open(argv[1], O_WRONLY | O_CREAT);
+	int fd = open(argv[1], O_WRONLY | O_CREAT, 0644);
 	if (fd < 0) {
 		printf("touch: %s: error\n", argv[1]);
 		exit(1);

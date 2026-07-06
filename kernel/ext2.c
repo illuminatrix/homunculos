@@ -942,7 +942,7 @@ static int ext2_add_entry(struct vfs_inode *dir, const char *name,
 
 		struct ext2_inode new_raw;
 		memset(&new_raw, 0, sizeof(new_raw));
-		new_raw.mode = EXT2_S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+		new_raw.mode = entry->i_mode;
 		new_raw.uid = 0;
 		new_raw.gid = 0;
 		new_raw.size = 0;

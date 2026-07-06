@@ -133,7 +133,7 @@ static void build_abs_path(struct task *t, const char *path,
 }
 
 int
-sys_open(const char *path, int flags)
+sys_open(const char *path, int flags, int mode)
 {
 	struct vfs_inode *inode;
 	struct file *f;
@@ -150,7 +150,9 @@ sys_open(const char *path, int flags)
 	if (!inode) {
 		if (!(flags & O_CREAT))
 			return -1;
-		inode = vfs_create_file(abs_path);
+		if (current)
+			mode = mode & ~current->umask;
+		inode = vfs_create_file(abs_path, mode);
 		if (!inode)
 			return -1;
 	} else {
