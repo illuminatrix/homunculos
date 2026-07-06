@@ -94,6 +94,44 @@ else
 	errors=$((errors + 1))
 fi
 
+# --- mkdir with umask: umask 077, mkdir /d, stat ---
+send_keys "umask 077 mkdir /d" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+send_keys "stat /d" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+if vga_contains "16832"; then
+	pass "umask 077 → mkdir → mode 040700 (decimal 16832)"
+else
+	vga_raw=$(vga_text | tail -c 200)
+	fail "Expected mode 16832 (040700). VGA tail: [$vga_raw]"
+	errors=$((errors + 1))
+fi
+
+# --- mknod with umask: umask 027, mknod /n c 1 3, stat ---
+send_keys "umask 027 mknod /n c 1 3" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+send_keys "stat /n" 0.08
+sleep 0.2
+monitor_cmd "sendkey ret" >/dev/null 2>&1
+sleep 2
+
+if vga_contains "8608"; then
+	pass "umask 027 → mknod → mode 020640 (decimal 8608)"
+else
+	vga_raw=$(vga_text | tail -c 200)
+	fail "Expected mode 8608 (020640). VGA tail: [$vga_raw]"
+	errors=$((errors + 1))
+fi
+
 # --- Restore default umask ---
 send_keys "umask 022" 0.08
 sleep 0.2

@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (mkdir(argv[1]) < 0) {
+	if (mkdir(argv[1], 0777) < 0) {
 		printf("mkdir: %s: error\n", argv[1]);
 		exit(1);
 	}

@@ -976,7 +976,7 @@ sys_access(const char *path)
 }
 
 int
-sys_mkdir(const char *path)
+sys_mkdir(const char *path, int mode)
 {
 	struct task *current = scheduler_get_current();
 	char abs_path[512];
@@ -984,7 +984,8 @@ sys_mkdir(const char *path)
 	if (!current || !path)
 		return -1;
 	build_abs_path(current, path, abs_path, sizeof(abs_path));
-	return vfs_mkdir(abs_path);
+	mode = mode & ~current->umask;
+	return vfs_mkdir(abs_path, (uint16_t)mode);
 }
 
 int
@@ -1206,6 +1207,7 @@ int sys_mknod(const char *path, int mode, dev_t dev)
 		return -1;
 
 	build_abs_path(current, path, abs_path, sizeof(abs_path));
+	mode = mode & ~current->umask;
 	return vfs_mknod(abs_path, (uint16_t)mode, dev);
 }
 

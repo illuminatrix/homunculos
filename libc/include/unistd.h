@@ -38,7 +38,7 @@ int pipe(int[2]);
 int dup2(int, int);
 int write(int, const void *, unsigned int);
 int access(const char *);
-int mkdir(const char *);
+int mkdir(const char *, int);
 int rmdir(const char *);
 int unlink(const char *);
 int symlink(const char *, const char *);

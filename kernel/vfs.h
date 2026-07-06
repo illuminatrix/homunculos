@@ -117,7 +117,7 @@ struct vfs_inode_ops {
 	int (*add_entry)(struct vfs_inode *dir, const char *name,
 			 struct vfs_inode *entry);
 	int (*remove_entry)(struct vfs_inode *dir, const char *name);
-	int (*mkdir)(struct vfs_inode *parent, const char *name);
+	int (*mkdir)(struct vfs_inode *parent, const char *name, uint16_t mode);
 	int (*rmdir)(struct vfs_inode *parent, const char *name);
 	int (*unlink)(struct vfs_inode *parent, const char *name);
 	int (*symlink)(struct vfs_inode *parent, const char *name,
@@ -163,7 +163,7 @@ struct file *vfs_open_file(struct vfs_inode *inode);
 struct file *vfs_open_file_flags(struct vfs_inode *inode, int flags);
 void vfs_close_file(struct file *f);
 struct vfs_inode *vfs_create_file(const char *path, uint16_t mode);
-int vfs_mkdir(const char *path);
+int vfs_mkdir(const char *path, uint16_t mode);
 int vfs_rmdir(const char *path);
 int vfs_unlink(const char *path);
 int vfs_symlink(const char *target, const char *path);

@@ -593,7 +593,7 @@ struct vfs_inode *vfs_create_file(const char *path, uint16_t mode)
 	return inode;
 }
 
-int vfs_mkdir(const char *path)
+int vfs_mkdir(const char *path, uint16_t mode)
 {
 	char dir_path[256];
 	char name[64];
@@ -610,7 +610,7 @@ int vfs_mkdir(const char *path)
 	    || !parent->ops || !parent->ops->mkdir)
 		return -1;
 
-	return parent->ops->mkdir(parent, name);
+	return parent->ops->mkdir(parent, name, mode);
 }
 
 int vfs_rmdir(const char *path)

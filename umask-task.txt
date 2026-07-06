@@ -66,7 +66,7 @@ Added built-in handler to `shell_elf.c` alongside the `/bin/umask` binary.
 
 ---
 
-## [ ] Step 3: `mkdir` + `mknod` mode propagation
+## [x] Step 3: `mkdir` + `mknod` mode propagation
 
 **`mkdir` and `mknod` now also respect umask.**
 
@@ -79,4 +79,4 @@ Added built-in handler to `shell_elf.c` alongside the `/bin/umask` binary.
 | `kernel/syscall.c` `sys_mknod` | Apply `mode = mode & ~current->umask` |
 | `tests/test-umask.sh` | **Extend** — add mkdir test (umask 077, `mkdir /tmp/d`, verify `040700`) and mknod test |
 
-**Test**: With umask 077, `mkdir /tmp/d; stat /tmp/d` shows `040700` (S_IFDIR|0700). With umask 027, `mknod /tmp/n c 1 3; stat /tmp/n` shows `020640` (S_IFCHR|0640).
+**Test**: With umask 077, `umask 077 mkdir /d; stat /d` shows `16832` (== 040700 = S_IFDIR|0700). With umask 027, `umask 027 mknod /n c 1 3; stat /n` shows `8608` (== 020640 = S_IFCHR|0640).

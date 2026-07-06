@@ -175,7 +175,7 @@ static int devtmpfs_remove_entry(struct vfs_inode *dir, const char *name)
 	return -1;
 }
 
-static int devtmpfs_mkdir(struct vfs_inode *parent, const char *name)
+static int devtmpfs_mkdir(struct vfs_inode *parent, const char *name, uint16_t mode)
 {
 	struct devtmpfs_dir *td = (struct devtmpfs_dir *)parent->private_data;
 	struct devtmpfs_dir *new_dir;

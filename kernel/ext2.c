@@ -17,7 +17,7 @@ static struct vfs_inode *ext2_lookup(struct vfs_inode *dir,
 static int ext2_add_entry(struct vfs_inode *dir, const char *name,
 			  struct vfs_inode *entry);
 static int ext2_remove_entry(struct vfs_inode *dir, const char *name);
-static int ext2_mkdir(struct vfs_inode *parent, const char *name);
+static int ext2_mkdir(struct vfs_inode *parent, const char *name, uint16_t mode);
 static int ext2_unlink(struct vfs_inode *parent, const char *name);
 static int ext2_rmdir(struct vfs_inode *parent, const char *name);
 static int ext2_symlink(struct vfs_inode *parent, const char *name,
@@ -1179,7 +1179,7 @@ static int ext2_remove_entry(struct vfs_inode *dir, const char *name)
 	return -1;
 }
 
-static int ext2_mkdir(struct vfs_inode *parent, const char *name)
+static int ext2_mkdir(struct vfs_inode *parent, const char *name, uint16_t mode)
 {
 	struct ext2_inode_data *pdata;
 	struct ext2_fs *fs;
@@ -1199,7 +1199,7 @@ static int ext2_mkdir(struct vfs_inode *parent, const char *name)
 		return -1;
 
 	memset(&new_raw, 0, sizeof(new_raw));
-	new_raw.mode = EXT2_S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+	new_raw.mode = EXT2_S_IFDIR | (mode & S_IPERM);
 	new_raw.uid = 0;
 	new_raw.gid = 0;
 	new_raw.links = 2;  /* . and .. plus parent's entry */
