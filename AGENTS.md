@@ -144,6 +144,7 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 122 | SYS_uname | `sys_uname` | `int sys_uname(struct utsname *buf)` |
 | 37 | SYS_kill | `sys_kill` | `int sys_kill(int pid, int sig)` |
 | 48 | SYS_signal | `sys_signal` | `int sys_signal(int signum, void (*handler)(int))` |
+| 57 | SYS_setpgid | `sys_setpgid` | `int sys_setpgid(int pid, int pgid)` |
 | 174 | SYS_rt_sigaction | `sys_rt_sigaction` | `int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)` |
 | 175 | SYS_rt_sigprocmask | `sys_rt_sigprocmask` | `int sys_rt_sigprocmask(int how, const uint32_t *set, uint32_t *oldset)` |
 | 15 | SYS_chmod | `sys_chmod` | `int sys_chmod(const char *path, int mode)` |

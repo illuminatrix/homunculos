@@ -64,6 +64,7 @@ unistd/truncate64.o \
 unistd/ftruncate64.o \
 unistd/umask.o \
 unistd/setsid.o \
+unistd/setpgid.o \
 unistd/mmap.o \
 unistd/munmap.o \
 unistd/mprotect.o \

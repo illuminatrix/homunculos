@@ -1052,6 +1052,36 @@ int sys_fsync(int fd)
 }
 
 /* --- dup --- */
+/* --- setpgid --- */
+int sys_setpgid(int pid, int pgid)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return -1;
+
+	struct task *target;
+	if (pid == 0) {
+		target = current;
+	} else {
+		/* Find task by pid */
+		target = 0;
+		for (int i = 0; i < next_pid; i++) {
+			if (tasks[i].pid == pid) {
+				target = &tasks[i];
+				break;
+			}
+		}
+		if (!target)
+			return -1;
+	}
+
+	if (pgid == 0)
+		pgid = target->pid;
+
+	target->pgid = pgid;
+	return 0;
+}
+
 /* --- setsid --- */
 int sys_setsid(void)
 {
@@ -1640,4 +1670,5 @@ syscall_init(void)
 	systemcall_table[SYS_setuid32]  = (uint32_t)sys_setuid32;
 	systemcall_table[SYS_setgid32]  = (uint32_t)sys_setgid32;
 	systemcall_table[SYS_setsid]    = (uint32_t)sys_setsid;
+	systemcall_table[SYS_setpgid]  = (uint32_t)sys_setpgid;
 }

@@ -58,6 +58,7 @@ extern char **environ;
 
 int umask(int);
 int setsid(void);
+int setpgid(int, int);
 
 /* Time */
 unsigned int sleep(unsigned int seconds);

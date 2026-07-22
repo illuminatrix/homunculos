@@ -47,6 +47,12 @@ if [ -f "$SETSID_TEST" ]; then
 	debugfs -w .part.img -R "write $SETSID_TEST /bin/setsid_test" 2>/dev/null
 fi
 
+# Test-only binary for setpgid testing
+SETPGID_TEST="${TESTS_DIR}/setpgid_test.elf"
+if [ -f "$SETPGID_TEST" ]; then
+	debugfs -w .part.img -R "write $SETPGID_TEST /bin/setpgid_test" 2>/dev/null
+fi
+
 # Test-only binary for fcntl testing
 FCNTL_TEST="${TESTS_DIR}/fcntl_test.elf"
 if [ -f "$FCNTL_TEST" ]; then
