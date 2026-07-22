@@ -25,6 +25,7 @@
 #define SYS_pipe       42
 #define SYS_brk        45
 #define SYS_dup2       63
+#define SYS_setsid     66
 #define SYS_getppid    64
 #define SYS_symlink    83
 #define SYS_readlink   85

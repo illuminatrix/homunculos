@@ -57,6 +57,7 @@ int ftruncate64(int, unsigned long);
 extern char **environ;
 
 int umask(int);
+int setsid(void);
 
 /* Time */
 unsigned int sleep(unsigned int seconds);

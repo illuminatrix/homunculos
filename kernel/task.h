@@ -50,6 +50,10 @@ struct task {
 
 	uint16_t umask;
 
+	/* Session / process group */
+	int sid;
+	int pgid;
+
 	/* Signal state */
 	uint32_t pending_signals;
 	uint32_t signal_mask;

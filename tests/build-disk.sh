@@ -41,6 +41,12 @@ if [ -f "$DUP_TEST" ]; then
 	debugfs -w .part.img -R "write $DUP_TEST /bin/dup_test" 2>/dev/null
 fi
 
+# Test-only binary for setsid testing
+SETSID_TEST="${TESTS_DIR}/setsid_test.elf"
+if [ -f "$SETSID_TEST" ]; then
+	debugfs -w .part.img -R "write $SETSID_TEST /bin/setsid_test" 2>/dev/null
+fi
+
 # Test-only binary for fcntl testing
 FCNTL_TEST="${TESTS_DIR}/fcntl_test.elf"
 if [ -f "$FCNTL_TEST" ]; then

@@ -1052,6 +1052,17 @@ int sys_fsync(int fd)
 }
 
 /* --- dup --- */
+/* --- setsid --- */
+int sys_setsid(void)
+{
+	struct task *current = scheduler_get_current();
+	if (!current)
+		return -1;
+	current->sid = current->pid;
+	current->pgid = current->pid;
+	return current->pid;
+}
+
 int sys_dup(int oldfd)
 {
 	struct task *current = scheduler_get_current();
@@ -1628,4 +1639,5 @@ syscall_init(void)
 	systemcall_table[SYS_getegid32] = (uint32_t)sys_getegid32;
 	systemcall_table[SYS_setuid32]  = (uint32_t)sys_setuid32;
 	systemcall_table[SYS_setgid32]  = (uint32_t)sys_setgid32;
+	systemcall_table[SYS_setsid]    = (uint32_t)sys_setsid;
 }

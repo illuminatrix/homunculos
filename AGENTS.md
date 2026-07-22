@@ -153,6 +153,7 @@ Reference: https://faculty.nps.edu/cseagle/assembly/sys_call.html
 | 38 | SYS_rename | `sys_rename` | `int sys_rename(const char *old, const char *new)` |
 | 41 | SYS_dup | `sys_dup` | `int sys_dup(int oldfd)` |
 | 43 | SYS_times | `sys_times` | `int sys_times(struct k_tms *buf)` |
+| 66 | SYS_setsid | `sys_setsid` | `int sys_setsid(void)` |
 | 173 | SYS_rt_sigreturn | `sys_rt_sigreturn` | `int sys_rt_sigreturn(void)` |
 
 Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.
@@ -168,7 +169,7 @@ Dispatch: `int $0x80` pushes edx, ecx, ebx; `call *systemcall_table(,%eax,4)`.
 ### Task / Scheduler
 
 - Static pool: `tasks[256]`, each with `task_stacks[pid][4096]`
-- Task struct: pid, state, context*, stack*, name[32], next*, fd_table[16], pdir*, is_user
+- Task struct: pid, state, context*, stack*, name[32], next*, fd_table[16], pdir*, is_user, sid, pgid
 - Context: esp, ebp, ebx, esi, edi, pdir (6 x 4 bytes)
 - `task_init_context()` -- ring 0 task: push arg, task_exit, entry; set context.esp
 - `task_init_user_context()` -- ring 3 task: user stack (lower half of task stack), iretl frame (upper half), kernel stack at TASK_STACK_SIZE for TSS.ESP0

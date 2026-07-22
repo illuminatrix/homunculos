@@ -68,7 +68,7 @@ dietlibc's start.S expects environ from the stack, which works.
 [x] getegid32  -- SYS_getegid32 (202).  Stub: return 0.
 [x] setuid32   -- SYS_setuid32 (213).  Stub: return 0.
 [x] setgid32   -- SYS_setgid32 (214).  Stub: return 0.
-[ ] setsid     -- SYS_setsid (66).  setsid command, daemonize.
+[x] setsid     -- SYS_setsid (66).  setsid command, daemonize.
 [ ] setpgid    -- SYS_setpgid (57).  Job control.
 [ ] umask      -- SYS_umask (60).  Default file creation mode.
 [ ] vfork      -- SYS_vfork (190).  BSD vfork().

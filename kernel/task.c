@@ -32,6 +32,8 @@ struct task *task_alloc(void)
 	t->cwd[0] = '/';
 	t->cwd[1] = '\0';
 	t->umask = 022;
+	t->sid = t->pid;
+	t->pgid = t->pid;
 	signal_init_task(t);
 	next_pid++;
 
@@ -77,6 +79,8 @@ struct task *task_fork(uint32_t eip, uint32_t cs, uint32_t eflags,
 	strncpy(child->cwd, parent->cwd, sizeof(child->cwd) - 1);
 	child->cwd[sizeof(child->cwd) - 1] = '\0';
 	child->umask = parent->umask;
+	child->sid = parent->sid;
+	child->pgid = parent->pgid;
 
 	/*
 	 * Copy parent's stack data below the int $0x80 frame to child.
